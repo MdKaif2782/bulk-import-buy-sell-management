@@ -23,8 +23,8 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border min-h-screen flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-2xl font-bold text-sidebar-primary">RIMS</h1>
-        <p className="text-xs text-sidebar-foreground/60 mt-1">Retail Import Management</p>
+        <h1 className="text-2xl font-bold text-sidebar-primary">WIMS</h1>
+        <p className="text-xs text-sidebar-foreground/60 mt-1">Wholesale Import Management</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">

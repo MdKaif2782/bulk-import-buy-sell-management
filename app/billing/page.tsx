@@ -20,7 +20,7 @@ const bills = [
   {
     id: 2,
     billNo: "INV-2025-002",
-    customer: "XYZ Retail",
+    customer: "XYZ Wholesale",
     amount: 125000,
     tax: 6250,
     total: 131250,

@@ -51,7 +51,7 @@ export default function Dashboard() {
         <div className="p-8">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-2">Welcome to your Retail Import Management System</p>
+            <p className="text-muted-foreground mt-2">Welcome to your Wholesale Import Management System</p>
           </div>
 
           {/* KPI Cards */}
