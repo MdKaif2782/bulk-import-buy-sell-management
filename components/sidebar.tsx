@@ -14,6 +14,7 @@ import {
   Home,
   Menu,
   X,
+  PackagePlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -23,6 +24,7 @@ const navItemsKeys = [
   { href: "/", labelKey: "dashboard", icon: Home },
   { href: "/products", labelKey: "products", icon: Package },
   { href: "/purchases", labelKey: "purchases", icon: ShoppingCart },
+  { href: "/restock", labelKey: "restock", icon: PackagePlus },
   { href: "/investors", labelKey: "investors", icon: Users },
   { href: "/quotations", labelKey: "quotations", icon: FileText },
   { href: "/billing", labelKey: "billing", icon: DollarSign },
