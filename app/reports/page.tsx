@@ -4,20 +4,23 @@ import { Sidebar } from "@/components/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, FileText } from "lucide-react"
+import { useLanguage } from "@/components/language-provider"
 
 export default function ReportsPage() {
+  const { t } = useLanguage()
+
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Reports</h1>
-            <p className="text-muted-foreground mt-2">View and export financial reports</p>
-          </div>
+      <main className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("reports")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">View and export financial reports</p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="p-4 md:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Summary Report</CardTitle>
@@ -122,16 +125,16 @@ export default function ReportsPage() {
                 ].map((report, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50"
+                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-semibold text-sm">{report.title}</p>
-                        <p className="text-xs text-muted-foreground">{report.desc}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{report.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{report.desc}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="flex-shrink-0 ml-2 bg-transparent">
                       <Download className="w-4 h-4" />
                     </Button>
                   </div>

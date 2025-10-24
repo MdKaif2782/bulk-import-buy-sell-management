@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search, FileText, DollarSign } from "lucide-react"
 import { QuotationDialog } from "@/components/quotation-dialog"
 import { QuotationTable } from "@/components/quotation-table"
+import { useLanguage } from "@/components/language-provider"
 
 interface LineItem {
   id: string
@@ -82,6 +83,7 @@ const initialQuotations: Quotation[] = [
 ]
 
 export default function QuotationsPage() {
+  const { t } = useLanguage()
   const [quotations, setQuotations] = useState<Quotation[]>(initialQuotations)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -141,18 +143,26 @@ export default function QuotationsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Quotations & Billing</h1>
-            <p className="text-muted-foreground mt-2">Create quotations and manage customer billing</p>
+      <main className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("quotations")}</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Create quotations and manage customer billing
+            </p>
           </div>
+          <Button onClick={() => handleOpenDialog()} className="gap-2 flex-shrink-0">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Quotation</span>
+          </Button>
+        </div>
 
+        <div className="p-4 md:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Quotations</CardTitle>
@@ -199,7 +209,7 @@ export default function QuotationsPage() {
           </div>
 
           {/* Search and Add */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               <Input
@@ -209,10 +219,6 @@ export default function QuotationsPage() {
                 className="pl-10"
               />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
-              <Plus className="w-4 h-4" />
-              New Quotation
-            </Button>
           </div>
 
           {/* Quotations Table */}
@@ -221,7 +227,7 @@ export default function QuotationsPage() {
               <CardTitle>Quotations & Invoices</CardTitle>
               <CardDescription>{filteredQuotations.length} quotations found</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <QuotationTable
                 quotations={filteredQuotations}
                 onEdit={handleOpenDialog}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search } from "lucide-react"
 import { ProductDialog } from "@/components/product-dialog"
 import { ProductTable } from "@/components/product-table"
+import { useLanguage } from "@/components/language-provider"
 
 interface Product {
   id: string
@@ -74,6 +75,7 @@ const initialProducts: Product[] = [
 ]
 
 export default function ProductsPage() {
+  const { t } = useLanguage()
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -122,16 +124,18 @@ export default function ProductsPage() {
   const lowStockProducts = products.filter((p) => p.quantity <= p.reorderLevel)
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Products & Stock</h1>
-            <p className="text-muted-foreground mt-2">Manage your product inventory and stock levels</p>
-          </div>
+      <main className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("products")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            Manage your product inventory and stock levels
+          </p>
+        </div>
 
+        <div className="p-4 md:p-8">
           {/* Stock Alert */}
           {lowStockProducts.length > 0 && (
             <Card className="mb-6 border-destructive/50 bg-destructive/5">
@@ -147,7 +151,7 @@ export default function ProductsPage() {
           )}
 
           {/* Search and Add */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               <Input
@@ -157,7 +161,7 @@ export default function ProductsPage() {
                 className="pl-10"
               />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Add Product
             </Button>
@@ -169,7 +173,7 @@ export default function ProductsPage() {
               <CardTitle>Product Inventory</CardTitle>
               <CardDescription>{filteredProducts.length} products found</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <ProductTable products={filteredProducts} onEdit={handleOpenDialog} onDelete={handleDeleteProduct} />
             </CardContent>
           </Card>

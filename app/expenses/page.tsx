@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search, Download, TrendingDown } from "lucide-react"
 import { ExpenseDialog } from "@/components/expense-dialog"
 import { ExpenseTable } from "@/components/expense-table"
+import { useLanguage } from "@/components/language-provider"
 import {
   LineChart,
   Line,
@@ -99,6 +100,7 @@ const initialExpenses: Expense[] = [
 const expenseCategories = ["Printing", "Transport", "Office", "Utilities", "Miscellaneous", "Marketing", "Maintenance"]
 
 export default function ExpensesPage() {
+  const { t } = useLanguage()
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -177,18 +179,20 @@ export default function ExpensesPage() {
   ]
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Expenses & Reports</h1>
-            <p className="text-muted-foreground mt-2">Track business expenses and generate financial reports</p>
-          </div>
+      <main className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("expenses")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            Track business expenses and generate financial reports
+          </p>
+        </div>
 
+        <div className="p-4 md:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
@@ -237,7 +241,7 @@ export default function ExpensesPage() {
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Expense Trend</CardTitle>
@@ -292,7 +296,7 @@ export default function ExpensesPage() {
               <CardTitle>Category Summary</CardTitle>
               <CardDescription>Expense breakdown by category</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <div className="space-y-3">
                 {categoryData
                   .filter((c) => c.value > 0)
@@ -301,12 +305,12 @@ export default function ExpensesPage() {
                     <div key={category.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: colors[index % colors.length] }}
                         />
                         <span className="font-medium">{category.name}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p className="font-semibold">৳ {category.value.toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">
                           {((category.value / stats.totalExpenses) * 100).toFixed(1)}%
@@ -319,7 +323,7 @@ export default function ExpensesPage() {
           </Card>
 
           {/* Search and Add */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               <Input
@@ -329,11 +333,11 @@ export default function ExpensesPage() {
                 className="pl-10"
               />
             </div>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Download className="w-4 h-4" />
               Export Report
             </Button>
-            <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Add Expense
             </Button>
@@ -345,7 +349,7 @@ export default function ExpensesPage() {
               <CardTitle>Expense Records</CardTitle>
               <CardDescription>{filteredExpenses.length} expenses found</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <ExpenseTable expenses={filteredExpenses} onEdit={handleOpenDialog} onDelete={handleDeleteExpense} />
             </CardContent>
           </Card>

@@ -18,6 +18,9 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertCircle } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageToggle } from "@/components/language-toggle"
+import { useLanguage } from "@/components/language-provider"
 
 const monthlyData = [
   { month: "Jan", sales: 420000, purchases: 380000, profit: 40000 },
@@ -43,22 +46,33 @@ const investorData = [
 ]
 
 export default function Dashboard() {
+  const { t } = useLanguage()
+
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-2">Welcome to your Wholesale Import Management System</p>
+      <main className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("dashboard")}</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Welcome to your Retail Import Management System
+            </p>
           </div>
+          <div className="flex items-center gap-4 flex-wrap justify-end">
+            <ThemeToggle />
+            <div className="w-px h-6 bg-border hidden sm:block" />
+            <LanguageToggle />
+          </div>
+        </div>
 
+        <div className="p-4 md:p-8">
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("dashboard")}</CardTitle>
                 <DollarSign className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
@@ -110,7 +124,7 @@ export default function Dashboard() {
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Sales vs Purchases</CardTitle>
@@ -161,7 +175,7 @@ export default function Dashboard() {
           </div>
 
           {/* Additional Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Profit Trend</CardTitle>
