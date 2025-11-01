@@ -1,223 +1,150 @@
-"use client"
+// app/purchase-order/page.tsx
+'use client';
 
-import { useState } from "react"
-import { Sidebar } from "@/components/sidebar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, Search, TrendingUp } from "lucide-react"
-import { PurchaseDialog } from "@/components/purchase-dialog"
-import { PurchaseTable } from "@/components/purchase-table"
-import { useLanguage } from "@/components/language-provider"
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { PurchaseOrderList } from '@/components/ui/purchase-order-list';
+import { PayDueBills } from '@/components/pay-due-bills';
+import { CreatePurchaseOrder } from '@/components/create-purchase-order';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Plus, TrendingUp, Package, Clock, CheckCircle } from 'lucide-react';
+import { Sidebar } from '@/components/sidebar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 
-interface Purchase {
-  id: string
-  poNumber: string
-  supplier: string
-  orderDate: string
-  expectedDelivery: string
-  status: "pending" | "shipped" | "delivered" | "cancelled"
-  totalAmount: number
-  items: number
-  notes: string
-}
+export default function PurchaseOrderPage() {
+  const [activeTab, setActiveTab] = useState('orders');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  const { purchaseOrders, addPurchaseOrder, updatePurchaseOrderStatus } = usePurchaseOrders();
 
-const initialPurchases: Purchase[] = [
-  {
-    id: "1",
-    poNumber: "PO-2025-001",
-    supplier: "Supplier A",
-    orderDate: "2025-01-15",
-    expectedDelivery: "2025-02-15",
-    status: "delivered",
-    totalAmount: 125000,
-    items: 5,
-    notes: "Cotton fabric shipment",
-  },
-  {
-    id: "2",
-    poNumber: "PO-2025-002",
-    supplier: "Supplier B",
-    orderDate: "2025-01-20",
-    expectedDelivery: "2025-02-20",
-    status: "shipped",
-    totalAmount: 85000,
-    items: 3,
-    notes: "Thread and accessories",
-  },
-  {
-    id: "3",
-    poNumber: "PO-2025-003",
-    supplier: "Supplier C",
-    orderDate: "2025-01-25",
-    expectedDelivery: "2025-02-25",
-    status: "pending",
-    totalAmount: 250000,
-    items: 8,
-    notes: "Silk blend fabric bulk order",
-  },
-  {
-    id: "4",
-    poNumber: "PO-2025-004",
-    supplier: "Supplier A",
-    orderDate: "2025-01-10",
-    expectedDelivery: "2025-01-30",
-    status: "delivered",
-    totalAmount: 95000,
-    items: 4,
-    notes: "Button and zipper supplies",
-  },
-]
-
-export default function PurchasesPage() {
-  const { t } = useLanguage()
-  const [purchases, setPurchases] = useState<Purchase[]>(initialPurchases)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null)
-
-  const filteredPurchases = purchases.filter(
-    (purchase) =>
-      purchase.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      purchase.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      purchase.notes.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const handleAddPurchase = (newPurchase: Omit<Purchase, "id">) => {
-    const purchase: Purchase = {
-      ...newPurchase,
-      id: Date.now().toString(),
-    }
-    setPurchases([...purchases, purchase])
-    setIsDialogOpen(false)
-  }
-
-  const handleEditPurchase = (updatedPurchase: Purchase) => {
-    setPurchases(purchases.map((p) => (p.id === updatedPurchase.id ? updatedPurchase : p)))
-    setEditingPurchase(null)
-    setIsDialogOpen(false)
-  }
-
-  const handleDeletePurchase = (id: string) => {
-    setPurchases(purchases.filter((p) => p.id !== id))
-  }
-
-  const handleOpenDialog = (purchase?: Purchase) => {
-    if (purchase) {
-      setEditingPurchase(purchase)
-    } else {
-      setEditingPurchase(null)
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false)
-    setEditingPurchase(null)
-  }
-
+  // Calculate stats
   const stats = {
-    totalOrders: purchases.length,
-    pendingOrders: purchases.filter((p) => p.status === "pending").length,
-    totalValue: purchases.reduce((sum, p) => sum + p.totalAmount, 0),
-    shippedOrders: purchases.filter((p) => p.status === "shipped").length,
-  }
+    totalOrders: purchaseOrders.length,
+    pendingOrders: purchaseOrders.filter(order => order.status === 'pending').length,
+    receivedOrders: purchaseOrders.filter(order => order.status === 'received').length,
+    totalAmount: purchaseOrders.reduce((sum, order) => sum + order.totalAmount, 0),
+    totalDue: purchaseOrders.reduce((sum, order) => sum + order.amountDue, 0),
+    totalPaid: purchaseOrders.reduce((sum, order) => sum + order.amountPaid, 0),
+  };
+
+  const handleCreateSuccess = (newOrder: any) => {
+    addPurchaseOrder(newOrder);
+    setIsCreateDialogOpen(false);
+  };
 
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
+      <div className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold">Purchase Order Management</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your purchase orders and vendor payments
+              </p>
+            </div>
+            {activeTab === 'orders' && (
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Purchase Order
+              </Button>
+            )}
+          </div>
 
-      <main className="flex-1 overflow-auto w-full">
-        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
-          <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("purchases")}</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Manage purchase orders and track imports</p>
-        </div>
-
-        <div className="p-4 md:p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                <TrendingUp className="h-4 w-4 text-accent" />
+                <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalOrders}</div>
-                <p className="text-xs text-muted-foreground mt-1">All time purchase orders</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-                <TrendingUp className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting shipment</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">In Transit</CardTitle>
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.shippedOrders}</div>
-                <p className="text-xs text-muted-foreground mt-1">Currently shipped</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats.pendingOrders} pending, {stats.receivedOrders} received
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">৳ {(stats.totalValue / 100000).toFixed(1)}L</div>
-                <p className="text-xs text-muted-foreground mt-1">Total purchase value</p>
+                <div className="text-2xl font-bold">{stats.totalAmount.toLocaleString()} BDT</div>
+                <p className="text-xs text-muted-foreground">
+                  All purchase orders
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Amount Due</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  {stats.totalDue.toLocaleString()} BDT
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Across all vendors
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Amount Paid</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats.totalPaid.toLocaleString()} BDT
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Total payments made
+                </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Search and Add */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by PO number, supplier, or notes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="orders" className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Purchase Orders
+              </TabsTrigger>
+              <TabsTrigger value="pay-due" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Pay Due Bills
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="orders">
+              <PurchaseOrderList 
+                purchaseOrders={purchaseOrders}
+                onUpdateStatus={updatePurchaseOrderStatus}
               />
-            </div>
-            <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
-              <Plus className="w-4 h-4" />
-              New Purchase Order
-            </Button>
-          </div>
+            </TabsContent>
 
-          {/* Purchases Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Purchase Orders</CardTitle>
-              <CardDescription>{filteredPurchases.length} orders found</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <PurchaseTable purchases={filteredPurchases} onEdit={handleOpenDialog} onDelete={handleDeletePurchase} />
-            </CardContent>
-          </Card>
+            <TabsContent value="pay-due">
+              <PayDueBills purchaseOrders={purchaseOrders} />
+            </TabsContent>
+          </Tabs>
+
+          {/* Create Purchase Order Dialog */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <CreatePurchaseOrder onSuccess={handleCreateSuccess} />
+            </DialogContent>
+          </Dialog>
         </div>
-      </main>
-
-      {/* Purchase Dialog */}
-      <PurchaseDialog
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        onSave={editingPurchase ? handleEditPurchase : handleAddPurchase}
-        purchase={editingPurchase}
-      />
+      </div>
     </div>
-  )
+  );
 }
