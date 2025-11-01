@@ -139,7 +139,7 @@ export default function PurchaseOrderPage() {
 
           {/* Create Purchase Order Dialog */}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="!max-w-[60vw] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden">
               <CreatePurchaseOrder onSuccess={handleCreateSuccess} />
             </DialogContent>
           </Dialog>

@@ -112,6 +112,7 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                 <TableHead>Date</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Amount Due</TableHead>
+                <TableHead>Funded By</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -147,6 +148,13 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                     <span className={order.amountDue > 0 ? "text-destructive font-medium" : "text-green-600"}>
                       {formatCurrency(order.amountDue)}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={"default"}>
+                        {order.investors.length>0?order.investors[0].name:"Self Funded"}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(order.status)} className="flex items-center gap-1 w-fit">
