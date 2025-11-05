@@ -50,7 +50,7 @@ export function InvestorTable({ investors, onEdit, onDelete }: InvestorTableProp
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-3 px-4 font-semibold">Name</th>
-            <th className="text-left py-3 px-4 font-semibold">Email</th>
+            <th className="text-left py-3 px-4 font-semibold">Funded Product</th>
             <th className="text-left py-3 px-4 font-semibold">Phone</th>
             <th className="text-right py-3 px-4 font-semibold">Share %</th>
             <th className="text-right py-3 px-4 font-semibold">Investment</th>
@@ -63,7 +63,7 @@ export function InvestorTable({ investors, onEdit, onDelete }: InvestorTableProp
           {investors.map((investor) => (
             <tr key={investor.id} className="border-b border-border hover:bg-muted/50 transition-colors">
               <td className="py-3 px-4 font-medium">{investor.name}</td>
-              <td className="py-3 px-4 text-muted-foreground">{investor.email}</td>
+              <td className="py-3 px-4 text-muted-foreground">{"Black Pen Model X"}</td>
               <td className="py-3 px-4 text-muted-foreground">{investor.phone}</td>
               <td className="py-3 px-4 text-right font-semibold">{investor.sharePercentage}%</td>
               <td className="py-3 px-4 text-right">৳ {investor.investmentAmount.toLocaleString()}</td>
