@@ -16,6 +16,7 @@ import {
   X,
   PackagePlus,
   ListOrdered,
+  TruckIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -27,8 +28,9 @@ const navItemsKeys = [
   { href: "/purchases", labelKey: "purchases", icon: ShoppingCart },
   { href: "/investors", labelKey: "investors", icon: Users },
   { href: "/quotations", labelKey: "quotations", icon: FileText },
-  { href: "/orders", labelKey: "orders", icon: ListOrdered },
-  { href: "/billing", labelKey: "billing", icon: DollarSign },
+  { href: "/orders", labelKey: "Orders", icon: ListOrdered },
+  { href: "/challan", labelKey: "Challans", icon: TruckIcon },
+  { href: "/billing", labelKey: "Billing", icon: DollarSign },
   { href: "/expenses", labelKey: "expenses", icon: TrendingUp },
   { href: "/reports", labelKey: "reports", icon: BarChart3 },
   { href: "/settings", labelKey: "settings", icon: Settings },
