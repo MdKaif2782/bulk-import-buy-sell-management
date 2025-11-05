@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit2, Trash2 } from "lucide-react"
+import { Edit2, Eye, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -12,25 +12,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
-interface Product {
-  id: string
-  name: string
-  sku: string
-  category: string
-  quantity: number
-  reorderLevel: number
-  unitPrice: number
-  supplier: string
-}
+import { Product } from "@/types/product"
 
 interface ProductTableProps {
   products: Product[]
   onEdit: (product: Product) => void
   onDelete: (id: string) => void
+  onViewDetails: (product: Product) => void
 }
 
-export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) {
+export function ProductTable({ products, onEdit, onDelete, onViewDetails }: ProductTableProps) {
   const getStockStatus = (quantity: number, reorderLevel: number) => {
     if (quantity <= reorderLevel) return "text-destructive"
     if (quantity <= reorderLevel * 1.5) return "text-yellow-600"
@@ -69,6 +60,15 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                 <div className="flex justify-center gap-2">
                   <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="h-8 w-8 p-0">
                     <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onViewDetails(product)}
+                    className="h-8 px-2 gap-1"
+                  >
+                    <Eye className="w-3 h-3" />
+                    Details
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
