@@ -65,3 +65,4 @@ export interface Payment {
   paymentMethod: 'bank' | 'cash' | 'card' | 'mobile banking';
   reference?: string;
 }
+
