@@ -6,6 +6,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/components/language-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { Provider } from "react-redux"
+import StoreProvider from "./providers/StoreProvider"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -24,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
+        <StoreProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Toaster
             position="top-right"
@@ -33,6 +36,7 @@ export default function RootLayout({
           />
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProvider>
+        </StoreProvider>
         <Analytics />
       </body>
     </html>
