@@ -3,7 +3,6 @@ import { setCredentials, logOut, updateTokens } from '../slices/authSlice'
 
 const baseQuery = fetchBaseQuery({
   baseUrl: 'http://localhost:2000/auth',
-  credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as any).auth.accessToken
     if (token) {
@@ -60,7 +59,11 @@ export const authApi = createApi({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          dispatch(setCredentials(data))
+          console.log(data)
+          localStorage.setItem("accessToken",data.accessToken)
+          localStorage.setItem("refreshToken",data.refreshToken)
+          localStorage.setItem("role",data.role)
+          localStorage.setItem("userId",data.id)
         } catch (error) {
           // Handle error
         }

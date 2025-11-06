@@ -12,6 +12,7 @@ import { Plus, TrendingUp, Package, Clock, CheckCircle } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export default function PurchaseOrderPage() {
   const [activeTab, setActiveTab] = useState('orders');
@@ -35,6 +36,7 @@ export default function PurchaseOrderPage() {
   };
 
   return (
+    <ProtectedRoute requiredRole="ADMIN">
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar />
       <div className="flex-1 p-6">
@@ -146,5 +148,6 @@ export default function PurchaseOrderPage() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
