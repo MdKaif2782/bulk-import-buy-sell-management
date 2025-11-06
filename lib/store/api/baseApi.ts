@@ -3,7 +3,6 @@ import { RootState } from '../index'
 
 const baseQuery = fetchBaseQuery({
   baseUrl: 'http://localhost:2000',
-  credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.accessToken
     if (token) {

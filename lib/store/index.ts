@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import { authApi } from './api/authApi'
 import { userApi } from './api/userApi'
 import authReducer from './slices/authSlice'
+import { baseApi } from './api/baseApi'
 
 export const makeStore = () => {
   return configureStore({
@@ -9,13 +10,14 @@ export const makeStore = () => {
       auth: authReducer,
       [authApi.reducerPath]: authApi.reducer,
       [userApi.reducerPath]: userApi.reducer,
+      [baseApi.reducerPath]: baseApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: ['persist/PERSIST'],
         },
-      }).concat(authApi.middleware, userApi.middleware),
+      }).concat(authApi.middleware, userApi.middleware, baseApi.middleware),
   })
 }
 
