@@ -214,7 +214,7 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
 
       {/* View Order Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="!max-w-[70vw]">
           <DialogHeader>
             <DialogTitle>Purchase Order Details</DialogTitle>
           </DialogHeader>
