@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { setCredentials, logOut, updateTokens } from '../slices/authSlice'
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://localhost:2000/auth',
+  baseUrl: 'https://middleman-backend.vercel.app/auth',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as any).auth.accessToken
     if (token) {
