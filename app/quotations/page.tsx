@@ -1,251 +1,283 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, FileText, DollarSign } from "lucide-react"
-import { QuotationDialog } from "@/components/quotation-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Search, CheckCircle, XCircle, Clock } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import { QuotationTable } from "@/components/quotation-table"
-import { useLanguage } from "@/components/language-provider"
-
-interface LineItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
-}
-
-interface Quotation {
-  id: string
-  quoteNumber: string
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  issueDate: string
-  dueDate: string
-  status: "draft" | "sent" | "accepted" | "rejected" | "invoiced"
-  lineItems: LineItem[]
-  taxPercentage: number
-  notes: string
-}
-
-const initialQuotations: Quotation[] = [
-  {
-    id: "1",
-    quoteNumber: "QT-2025-001",
-    customerName: "ABC Retail Store",
-    customerEmail: "abc@retail.com",
-    customerPhone: "+880-1700-111111",
-    issueDate: "2025-01-20",
-    dueDate: "2025-02-20",
-    status: "accepted",
-    lineItems: [
-      { id: "1", description: "Cotton Fabric Roll", quantity: 10, unitPrice: 450 },
-      { id: "2", description: "Polyester Thread", quantity: 20, unitPrice: 85 },
-    ],
-    taxPercentage: 15,
-    notes: "Bulk order for retail store",
-  },
-  {
-    id: "2",
-    quoteNumber: "QT-2025-002",
-    customerName: "XYZ Fashion House",
-    customerEmail: "xyz@fashion.com",
-    customerPhone: "+880-1700-222222",
-    issueDate: "2025-01-25",
-    dueDate: "2025-02-25",
-    status: "sent",
-    lineItems: [
-      { id: "1", description: "Silk Blend Fabric", quantity: 5, unitPrice: 850 },
-      { id: "2", description: "Buttons (Plastic)", quantity: 500, unitPrice: 12 },
-    ],
-    taxPercentage: 15,
-    notes: "Premium fabric collection",
-  },
-  {
-    id: "3",
-    quoteNumber: "QT-2025-003",
-    customerName: "Fashion Boutique",
-    customerEmail: "boutique@fashion.com",
-    customerPhone: "+880-1700-333333",
-    issueDate: "2025-01-15",
-    dueDate: "2025-02-15",
-    status: "invoiced",
-    lineItems: [
-      { id: "1", description: "Zippers", quantity: 100, unitPrice: 35 },
-      { id: "2", description: "Cotton Fabric Roll", quantity: 8, unitPrice: 450 },
-    ],
-    taxPercentage: 15,
-    notes: "Regular order",
-  },
-]
+import { CreateQuotationDialog } from "@/components/quotation-dialog"
+import { EditQuotationDialog } from "@/components/edit-quotation-dialog"
+import { QuotationDetailsDialog } from "@/components/quotation-detail-dialog"
+import { AcceptQuotationDialog } from "@/components/accept-quotation-dialog"
+import {
+  useGetQuotationsQuery,
+  useDeleteQuotationMutation,
+  useUpdateQuotationStatusMutation,
+} from "@/lib/store/api/quotationApi"
+import { Quotation, QuotationSearchParams } from "@/types/quotation"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 export default function QuotationsPage() {
-  const { t } = useLanguage()
-  const [quotations, setQuotations] = useState<Quotation[]>(initialQuotations)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const filteredQuotations = quotations.filter(
-    (q) =>
-      q.quoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // ✅ Initialize with defaults (no more undefined errors)
+  const [searchParams, setSearchParams] = useState<QuotationSearchParams>({
+    page: 1,
+    limit: 10,
+    search: "",
+    status: undefined,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  })
 
-  const handleAddQuotation = (newQuotation: Omit<Quotation, "id">) => {
-    const quotation: Quotation = {
-      ...newQuotation,
-      id: Date.now().toString(),
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false)
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
+
+  // API calls
+  const {
+    data: quotationsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetQuotationsQuery(searchParams)
+
+  const [deleteQuotation] = useDeleteQuotationMutation()
+  const [updateQuotationStatus] = useUpdateQuotationStatusMutation()
+
+  // ✅ Handlers
+  const handleSearch = (searchTerm: string) => {
+    setSearchParams(prev => ({
+      ...prev,
+      search: searchTerm,
+      page: 1,
+    }))
+  }
+
+  const handleStatusFilter = (
+    status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | ""
+  ) => {
+    setSearchParams(prev => ({
+      ...prev,
+      status: status || undefined,
+      page: 1,
+    }))
+  }
+
+  const handlePageChange = (page: number) => {
+    setSearchParams(prev => ({
+      ...prev,
+      page,
+    }))
+  }
+
+  const handleCreateQuotation = () => setIsCreateDialogOpen(true)
+
+  const handleEditQuotation = (quotation: Quotation) => {
+    setSelectedQuotation(quotation)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetails = (quotation: Quotation) => {
+    setSelectedQuotation(quotation)
+    setIsDetailsDialogOpen(true)
+  }
+
+  const handleAcceptQuotation = (quotation: Quotation) => {
+    setSelectedQuotation(quotation)
+    setIsAcceptDialogOpen(true)
+  }
+
+  const handleDeleteQuotation = async (id: string) => {
+    try {
+      await deleteQuotation(id).unwrap()
+      toast({
+        title: "Success",
+        description: "Quotation deleted successfully",
+      })
+      refetch()
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete quotation",
+        variant: "destructive",
+      })
     }
-    setQuotations([...quotations, quotation])
-    setIsDialogOpen(false)
   }
 
-  const handleEditQuotation = (updatedQuotation: Quotation) => {
-    setQuotations(quotations.map((q) => (q.id === updatedQuotation.id ? updatedQuotation : q)))
-    setEditingQuotation(null)
-    setIsDialogOpen(false)
-  }
-
-  const handleDeleteQuotation = (id: string) => {
-    setQuotations(quotations.filter((q) => q.id !== id))
-  }
-
-  const handleOpenDialog = (quotation?: Quotation) => {
-    if (quotation) {
-      setEditingQuotation(quotation)
-    } else {
-      setEditingQuotation(null)
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      await updateQuotationStatus({ id, status }).unwrap()
+      toast({
+        title: "Success",
+        description: `Quotation status updated to ${status.toLowerCase()}`,
+      })
+      refetch()
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update quotation status",
+        variant: "destructive",
+      })
     }
-    setIsDialogOpen(true)
   }
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false)
-    setEditingQuotation(null)
+  const handleCloseDialogs = () => {
+    setIsCreateDialogOpen(false)
+    setIsEditDialogOpen(false)
+    setIsDetailsDialogOpen(false)
+    setIsAcceptDialogOpen(false)
+    setSelectedQuotation(null)
   }
 
-  const calculateTotal = (lineItems: LineItem[], taxPercentage: number) => {
-    const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    const tax = (subtotal * taxPercentage) / 100
-    return subtotal + tax
+  // ✅ Safe status badge renderer
+  const getStatusBadge = (status: string) => {
+    const configMap = {
+      PENDING: { variant: "secondary" as const, icon: Clock },
+      ACCEPTED: { variant: "default" as const, icon: CheckCircle },
+      REJECTED: { variant: "destructive" as const, icon: XCircle },
+      EXPIRED: { variant: "outline" as const, icon: Clock },
+    }
+
+    const config = configMap[status as keyof typeof configMap] || configMap.PENDING
+    const Icon = config.icon
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
+        <Icon className="w-3 h-3" />
+        {status}
+      </Badge>
+    )
   }
 
   const stats = {
-    totalQuotations: quotations.length,
-    acceptedQuotations: quotations.filter((q) => q.status === "accepted").length,
-    totalValue: quotations.reduce((sum, q) => sum + calculateTotal(q.lineItems, q.taxPercentage), 0),
-    pendingQuotations: quotations.filter((q) => q.status === "sent").length,
+    total: quotationsResponse?.meta?.total ?? 0,
+    pending: quotationsResponse?.data?.filter(q => q.status === "PENDING").length ?? 0,
+    accepted: quotationsResponse?.data?.filter(q => q.status === "ACCEPTED").length ?? 0,
+    rejected: quotationsResponse?.data?.filter(q => q.status === "REJECTED").length ?? 0,
   }
 
   return (
-    <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar />
+    <ProtectedRoute requiredRole="ADMIN">
+      <div className="flex min-h-screen bg-background flex-col md:flex-row">
+        <Sidebar />
 
-      <main className="flex-1 overflow-auto w-full">
-        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("quotations")}</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Create quotations and manage customer billing
-            </p>
-          </div>
-          <Button onClick={() => handleOpenDialog()} className="gap-2 flex-shrink-0">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">New Quotation</span>
-          </Button>
-        </div>
-
-        <div className="p-4 md:p-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Quotations</CardTitle>
-                <FileText className="h-4 w-4 text-accent" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalQuotations}</div>
-                <p className="text-xs text-muted-foreground mt-1">All quotations</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-                <FileText className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.acceptedQuotations}</div>
-                <p className="text-xs text-muted-foreground mt-1">Accepted quotations</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                <FileText className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingQuotations}</div>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting response</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">৳ {(stats.totalValue / 100000).toFixed(1)}L</div>
-                <p className="text-xs text-muted-foreground mt-1">Combined value</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Search and Add */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by quote number, customer name, or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <main className="flex-1 overflow-auto w-full">
+          <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl md:text-4xl font-bold text-foreground">Quotations</h1>
+                <p className="text-sm md:text-base text-muted-foreground mt-1">
+                  Manage customer quotations and track their status
+                </p>
+              </div>
+              <Button onClick={handleCreateQuotation} className="mt-2 sm:mt-0 gap-2">
+                <Plus className="w-4 h-4" />
+                Create Quotation
+              </Button>
             </div>
           </div>
 
-          {/* Quotations Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quotations & Invoices</CardTitle>
-              <CardDescription>{filteredQuotations.length} quotations found</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <QuotationTable
-                quotations={filteredQuotations}
-                onEdit={handleOpenDialog}
-                onDelete={handleDeleteQuotation}
-                calculateTotal={calculateTotal}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+          <div className="p-4 md:p-8">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {[
+                { label: "Total", value: stats.total },
+                { label: "Pending", value: stats.pending, color: "text-yellow-600" },
+                { label: "Accepted", value: stats.accepted, color: "text-green-600" },
+                { label: "Rejected", value: stats.rejected, color: "text-red-600" },
+              ].map(({ label, value, color }) => (
+                <Card key={label}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">{label}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${color ?? ""}`}>{value}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-      {/* Quotation Dialog */}
-      <QuotationDialog
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        onSave={editingQuotation ? handleEditQuotation : handleAddQuotation}
-        quotation={editingQuotation}
-      />
-    </div>
+            {/* Search + Filter */}
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by quotation number, company name..."
+                      value={searchParams.search ?? ""}
+                      onChange={e => handleSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {["", "PENDING", "ACCEPTED", "REJECTED"].map(s => (
+                      <Button
+                        key={s || "ALL"}
+                        variant={searchParams.status === s || (!s && !searchParams.status) ? "default" : "outline"}
+                        onClick={() =>
+                          handleStatusFilter(s as "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "")
+                        }
+                      >
+                        {s || "All"}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quotation Management</CardTitle>
+                <CardDescription>
+                  {isError
+                    ? "Error loading quotations"
+                    : isLoading
+                    ? "Loading..."
+                    : `${quotationsResponse?.meta?.total ?? 0} quotations found`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <QuotationTable
+                  quotations={quotationsResponse?.data ?? []}
+                  isLoading={isLoading}
+                  onEdit={handleEditQuotation}
+                  onViewDetails={handleViewDetails}
+                  onAccept={handleAcceptQuotation}
+                  onDelete={handleDeleteQuotation}
+                  onUpdateStatus={handleUpdateStatus}
+                  pagination={quotationsResponse?.meta}
+                  onPageChange={handlePageChange}
+                  currentPage={searchParams.page}
+                  getStatusBadge={getStatusBadge}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+
+        {/* Dialogs */}
+        <CreateQuotationDialog isOpen={isCreateDialogOpen} onClose={handleCloseDialogs} />
+        <EditQuotationDialog isOpen={isEditDialogOpen} onClose={handleCloseDialogs} quotation={selectedQuotation} />
+        <QuotationDetailsDialog
+          isOpen={isDetailsDialogOpen}
+          onClose={handleCloseDialogs}
+          quotation={selectedQuotation}
+          getStatusBadge={getStatusBadge}
+        />
+        <AcceptQuotationDialog isOpen={isAcceptDialogOpen} onClose={handleCloseDialogs} quotation={selectedQuotation} />
+      </div>
+    </ProtectedRoute>
   )
 }
