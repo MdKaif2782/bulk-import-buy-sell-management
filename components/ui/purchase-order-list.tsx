@@ -1,4 +1,3 @@
-// app/purchase-order/components/purchase-order-list.tsx
 'use client';
 
 import { useState } from 'react';
@@ -9,24 +8,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PurchaseOrder, Product } from '@/types';
-import { Package, CheckCircle, Clock, Eye, Building, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
+import { POStatus, PurchaseOrder } from '@/types/purchaseOrder';
+import { Package, CheckCircle, Clock, Eye, Building, Calendar, Loader2 } from 'lucide-react';
+import { useMarkAsReceivedMutation } from '@/lib/store/api/purchaseOrdersApi';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
-  onUpdateStatus: (orderId: string, status: PurchaseOrder['status'], receivedProducts?: Product[]) => void;
+  onUpdateStatus: (orderId: string, status: POStatus) => void;
+  isLoading?: boolean;
 }
 
-export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOrderListProps) {
+export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = false }: PurchaseOrderListProps) {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [receivedProducts, setReceivedProducts] = useState<Product[]>([]);
+  
+  const [markAsReceived, { isLoading: isMarkingReceived }] = useMarkAsReceivedMutation();
 
   const handleMarkReceived = (order: PurchaseOrder) => {
     setSelectedOrder(order);
-    setReceivedProducts(order.products.map(p => ({ ...p, receivedQuantity: p.quantity, salePrice: p.unitPrice * 1.2 })));
     setIsReceiveDialogOpen(true);
   };
 
@@ -35,51 +35,45 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
     setIsViewDialogOpen(true);
   };
 
-  const handleConfirmReceive = () => {
+  const handleConfirmReceive = async () => {
     if (!selectedOrder) return;
 
-    // Update products with received quantities and sale prices
-    const updatedProducts = receivedProducts.map(product => ({
-      ...product,
-      quantity: product.receivedQuantity || product.quantity,
-      totalPrice: (product.receivedQuantity || product.quantity) * product.unitPrice
-    }));
+    try {
+      // Create received items data - in a real app, you'd get this from form inputs
+      const receivedItems = selectedOrder.items.map(item => ({
+        purchaseOrderItemId: item.id,
+        receivedQuantity: item.quantity, // Default to full quantity
+        expectedSalePrice: item.unitPrice * 1.2, // Default 20% markup
+      }));
 
-    onUpdateStatus(selectedOrder.id, 'received', updatedProducts);
-    setIsReceiveDialogOpen(false);
-    setSelectedOrder(null);
-    setReceivedProducts([]);
-  };
-
-  const updateReceivedProduct = (index: number, field: string, value: string | number) => {
-    const updatedProducts = [...receivedProducts];
-    const product = updatedProducts[index];
-    
-    if (field === 'receivedQuantity') {
-      product.receivedQuantity = Number(value);
-    } else if (field === 'salePrice') {
-      product.salePrice = Number(value);
+      await markAsReceived({
+        id: selectedOrder.id,
+        data: { receivedItems }
+      }).unwrap();
+      
+      setIsReceiveDialogOpen(false);
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error('Failed to mark as received:', error);
     }
-    
-    setReceivedProducts(updatedProducts);
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: POStatus) => {
     switch (status) {
-      case 'received':
+      case POStatus.RECEIVED:
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'cancelled':
+      case POStatus.CANCELLED:
         return <Package className="w-4 h-4 text-red-500" />;
       default:
         return <Clock className="w-4 h-4 text-yellow-500" />;
     }
   };
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: POStatus) => {
     switch (status) {
-      case 'received':
+      case POStatus.RECEIVED:
         return 'default';
-      case 'cancelled':
+      case POStatus.CANCELLED:
         return 'destructive';
       default:
         return 'secondary';
@@ -94,6 +88,24 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
     }).format(amount);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center items-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -107,12 +119,12 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order ID</TableHead>
+                <TableHead>PO Number</TableHead>
                 <TableHead>Vendor</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Amount Due</TableHead>
-                <TableHead>Funded By</TableHead>
+                <TableHead>Investors</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -123,43 +135,45 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Building className="w-4 h-4 text-muted-foreground" />
-                      {order.id}
+                      {order.poNumber}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{order.vendor.name}</div>
+                      <div className="font-medium">{order.vendorName}</div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1">
                         <Package className="w-3 h-3" />
-                        {order.products.length} products
+                        {order.items.length} items
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-muted-foreground" />
-                      {order.orderDate.toLocaleDateString()}
+                      {formatDate(order.createdAt)}
                     </div>
                   </TableCell>
                   <TableCell className="font-semibold">
                     {formatCurrency(order.totalAmount)}
                   </TableCell>
                   <TableCell>
-                    <span className={order.amountDue > 0 ? "text-destructive font-medium" : "text-green-600"}>
-                      {formatCurrency(order.amountDue)}
+                    <span className={order.dueAmount > 0 ? "text-destructive font-medium" : "text-green-600"}>
+                      {formatCurrency(order.dueAmount)}
                     </span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Badge variant={"default"}>
-                        {order.investors.length>0?order.investors[0].name:"Self Funded"}
+                        {order.investments.length > 0 
+                          ? `${order.investments.length} investors` 
+                          : "Self Funded"}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(order.status)} className="flex items-center gap-1 w-fit">
                       {getStatusIcon(order.status)}
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1).toLowerCase()}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -176,7 +190,7 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                         variant="default"
                         size="sm"
                         onClick={() => handleMarkReceived(order)}
-                        disabled={order.status === 'received'}
+                        disabled={order.status === POStatus.RECEIVED || order.status === POStatus.CANCELLED}
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Mark Received
@@ -212,12 +226,12 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                   <Label className="text-sm font-medium">Order Information</Label>
                   <div className="p-3 bg-muted rounded-lg space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm">Order ID:</span>
-                      <span className="font-medium">{selectedOrder.id}</span>
+                      <span className="text-sm">PO Number:</span>
+                      <span className="font-medium">{selectedOrder.poNumber}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Order Date:</span>
-                      <span>{selectedOrder.orderDate.toLocaleDateString()}</span>
+                      <span>{formatDate(selectedOrder.createdAt)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Status:</span>
@@ -225,15 +239,20 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                         {selectedOrder.status}
                       </Badge>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Payment Type:</span>
+                      <span>{selectedOrder.paymentType}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Vendor Information</Label>
                   <div className="p-3 bg-muted rounded-lg space-y-2">
-                    <div className="font-medium">{selectedOrder.vendor.name}</div>
-                    <div className="text-sm">{selectedOrder.vendor.contact}</div>
-                    <div className="text-sm text-muted-foreground">{selectedOrder.vendor.country}</div>
+                    <div className="font-medium">{selectedOrder.vendorName}</div>
+                    <div className="text-sm">{selectedOrder.vendorContact}</div>
+                    <div className="text-sm text-muted-foreground">{selectedOrder.vendorCountry}</div>
+                    <div className="text-sm text-muted-foreground">{selectedOrder.vendorAddress}</div>
                   </div>
                 </div>
               </div>
@@ -241,31 +260,58 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
               <div>
                 <Label className="text-sm font-medium">Products</Label>
                 <div className="mt-2 space-y-2">
-                  {selectedOrder.products.map((product) => (
-                    <div key={product.id} className="flex justify-between items-center p-3 border rounded-lg">
+                  {selectedOrder.items.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center p-3 border rounded-lg">
                       <div>
-                        <div className="font-medium">{product.name}</div>
+                        <div className="font-medium">{item.productName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {product.quantity} × {formatCurrency(product.unitPrice)}
+                          {item.quantity} × {formatCurrency(item.unitPrice)}
+                          {item.description && ` - ${item.description}`}
                         </div>
                       </div>
                       <div className="font-semibold">
-                        {formatCurrency(product.totalPrice)}
+                        {formatCurrency(item.totalPrice)}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
+              {selectedOrder.investments.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Investments</Label>
+                  <div className="mt-2 space-y-2">
+                    {selectedOrder.investments.map((investment) => (
+                      <div key={investment.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">{investment.investor.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Profit Share: {investment.profitPercentage}%
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">
+                            {formatCurrency(investment.investmentAmount)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {investment.isFullInvestment ? 'Full Investment' : 'Partial Investment'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                    <span>{formatCurrency(selectedOrder.totalAmount - selectedOrder.taxAmount)}</span>
                   </div>
-                  {selectedOrder.taxPercentage > 0 && (
+                  {selectedOrder.taxAmount > 0 && (
                     <div className="flex justify-between">
-                      <span>Tax ({selectedOrder.taxPercentage}%):</span>
+                      <span>Tax:</span>
                       <span>{formatCurrency(selectedOrder.taxAmount)}</span>
                     </div>
                   )}
@@ -277,11 +323,13 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Amount Paid:</span>
-                    <span className="text-green-600">{formatCurrency(selectedOrder.amountPaid)}</span>
+                    <span className="text-green-600">
+                      {formatCurrency(selectedOrder.totalAmount - selectedOrder.dueAmount)}
+                    </span>
                   </div>
                   <div className="flex justify-between font-bold text-destructive border-t pt-2">
                     <span>Amount Due:</span>
-                    <span>{formatCurrency(selectedOrder.amountDue)}</span>
+                    <span>{formatCurrency(selectedOrder.dueAmount)}</span>
                   </div>
                 </div>
               </div>
@@ -292,7 +340,7 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
 
       {/* Mark Received Dialog */}
       <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="!max-w-[70vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
@@ -304,61 +352,75 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Order ID:</span>
-                  <div>{selectedOrder.id}</div>
+                  <span className="font-medium">PO Number:</span>
+                  <div>{selectedOrder.poNumber}</div>
                 </div>
                 <div>
                   <span className="font-medium">Vendor:</span>
-                  <div>{selectedOrder.vendor.name}</div>
+                  <div>{selectedOrder.vendorName}</div>
                 </div>
               </div>
 
               <div>
                 <h4 className="font-medium mb-3">Received Products</h4>
                 <div className="space-y-3">
-                  {receivedProducts.map((product, index) => (
-                    <div key={product.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 border rounded-lg">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 border rounded-lg">
                       <div>
                         <Label>Product Name</Label>
-                        <Input value={product.name} disabled />
+                        <Input value={item.productName} disabled />
                       </div>
                       <div>
                         <Label>Quantity Received</Label>
                         <Input 
                           type="number" 
-                          value={product.receivedQuantity || product.quantity}
-                          onChange={(e) => updateReceivedProduct(index, 'receivedQuantity', e.target.value)}
+                          defaultValue={item.quantity}
                           min="0"
-                          max={product.quantity}
+                          max={item.quantity}
+                          disabled
                         />
                         <div className="text-xs text-muted-foreground mt-1">
-                          Ordered: {product.quantity}
+                          Ordered: {item.quantity}
                         </div>
                       </div>
                       <div>
                         <Label>Unit Cost (BDT)</Label>
-                        <Input value={product.unitPrice} disabled />
+                        <Input value={item.unitPrice} disabled />
                       </div>
                       <div>
                         <Label>Sale Price (BDT)</Label>
                         <Input 
                           type="number"
-                          value={product.salePrice || product.unitPrice * 1.2}
-                          onChange={(e) => updateReceivedProduct(index, 'salePrice', e.target.value)}
+                          defaultValue={item.unitPrice * 1.2}
                           min="0"
                           step="0.01"
+                          disabled
                         />
                       </div>
                       <div>
-                        <Label>Product Image</Label>
+                        <Label>Total Value</Label>
                         <Input 
-                          type="file"
-                          accept="image/*"
-                          className="cursor-pointer"
+                          value={formatCurrency(item.totalPrice)}
+                          disabled
                         />
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="text-sm text-blue-800">
+                  <div className="font-medium">Note</div>
+                  <div className="mt-1">
+                    Marking this purchase order as received will:
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Update the purchase order status to "RECEIVED"</li>
+                      <li>Add all products to inventory with the specified sale prices</li>
+                      <li>Generate product codes and barcodes for inventory tracking</li>
+                      <li>Make products available for quotations and sales</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -369,9 +431,21 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus }: PurchaseOr
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleConfirmReceive}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirm Receipt & Add to Inventory
+                <Button 
+                  onClick={handleConfirmReceive}
+                  disabled={isMarkingReceived}
+                >
+                  {isMarkingReceived ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Confirm Receipt & Add to Inventory
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

@@ -9,49 +9,119 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { PurchaseOrder, Payment } from '@/types';
 import { toast } from 'sonner';
-import { Calendar, CreditCard, Building, Wallet, TrendingDown } from 'lucide-react';
+import { Calendar, CreditCard, Building, Wallet, TrendingDown, Loader2, Receipt, Clock } from 'lucide-react';
+import { 
+  useGetDuePurchaseOrdersQuery, 
+  useAddPaymentMutation 
+} from '@/lib/store/api/purchaseOrdersApi';
 
-interface PayDueBillsProps {
-  purchaseOrders: PurchaseOrder[];
+interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  vendorName: string;
+  totalAmount: number;
+  dueAmount: number;
+  status: string;
+  createdAt: string;
+  payments: Array<{
+    id: string;
+    amount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    reference?: string;
+    notes?: string;
+  }>;
+  user?: {
+    name: string;
+    email: string;
+  };
+  _count?: {
+    payments: number;
+  };
 }
 
-export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
+interface DueOrdersResponse {
+  data: PurchaseOrder[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export function PayDueBills() {
   const [selectedOrder, setSelectedOrder] = useState<string>('');
   const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash' | 'card' | 'mobile banking'>('bank');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE'>('BANK_TRANSFER');
   const [reference, setReference] = useState('');
 
-  const dueOrders = purchaseOrders.filter(order => order.amountDue > 0);
+  // Fetch due purchase orders from API
+  const { 
+    data: dueOrdersResponse, 
+    isLoading: isLoadingOrders, 
+    error: ordersError,
+    refetch: refetchDueOrders 
+  } = useGetDuePurchaseOrdersQuery({});
+  
+  // Add payment mutation
+  const [addPayment, { isLoading: isProcessingPayment }] = useAddPaymentMutation();
+
+  const dueOrders = (dueOrdersResponse as DueOrdersResponse)?.data || [];
   const selectedOrderData = dueOrders.find(order => order.id === selectedOrder);
 
-  const handlePayment = () => {
+  // Handle payment submission
+  const handlePayment = async () => {
     if (!selectedOrderData || paymentAmount <= 0) {
       toast.error('Please select a bill and enter a valid payment amount');
       return;
     }
 
-    if (paymentAmount > selectedOrderData.amountDue) {
+    if (paymentAmount > selectedOrderData.dueAmount) {
       toast.error('Payment amount cannot exceed due amount');
       return;
     }
 
-    // In a real app, you would make an API call here
-    toast.success('Payment recorded successfully!', {
-      description: `Paid ${paymentAmount.toLocaleString()} BDT to ${selectedOrderData.vendor.name}`,
-    });
+    try {
+      const paymentData = {
+        amount: paymentAmount,
+        paymentMethod,
+        reference: reference || undefined,
+        notes: `Payment for PO: ${selectedOrderData.poNumber}`,
+        paymentDate: new Date().toISOString(),
+      };
 
-    // Reset form but keep the order selected
-    setPaymentAmount(0);
-    setReference('');
+      await addPayment({
+        purchaseOrderId: selectedOrder,
+        paymentData,
+      }).unwrap();
+
+      toast.success('Payment recorded successfully!', {
+        description: `Paid ${formatCurrency(paymentAmount)} to ${selectedOrderData.vendorName}`,
+      });
+
+      // Reset form
+      setSelectedOrder('');
+      setPaymentAmount(0);
+      setReference('');
+      
+      // Refetch data to update UI
+      refetchDueOrders();
+    } catch (error: any) {
+      console.error('Payment failed:', error);
+      const errorMessage = error?.data?.message || 'Please try again or contact support.';
+      toast.error('Failed to record payment', {
+        description: errorMessage,
+      });
+    }
   };
 
   const handleOrderSelect = (orderId: string) => {
     setSelectedOrder(orderId);
     const order = dueOrders.find(o => o.id === orderId);
     if (order) {
-      setPaymentAmount(order.amountDue);
+      setPaymentAmount(order.dueAmount);
     }
   };
 
@@ -63,8 +133,67 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
     }).format(amount);
   };
 
-  const totalDue = dueOrders.reduce((sum, order) => sum + order.amountDue, 0);
-  const totalPaid = purchaseOrders.reduce((sum, order) => sum + order.amountPaid, 0);
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-BD', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case 'BANK_TRANSFER': return <Building className="w-3 h-3" />;
+      case 'CASH': return <Wallet className="w-3 h-3" />;
+      case 'CARD': return <CreditCard className="w-3 h-3" />;
+      case 'CHEQUE': return <Receipt className="w-3 h-3" />;
+      default: return <CreditCard className="w-3 h-3" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method) {
+      case 'BANK_TRANSFER': return 'Bank Transfer';
+      case 'CASH': return 'Cash';
+      case 'CARD': return 'Card';
+      case 'CHEQUE': return 'Cheque';
+      default: return method;
+    }
+  };
+
+  // Calculate totals
+  const totalDue = dueOrders.reduce((sum, order) => sum + order.dueAmount, 0);
+  const totalPaid = dueOrders.reduce((sum, order) => sum + (order.totalAmount - order.dueAmount), 0);
+
+  // Handle loading state
+  if (isLoadingOrders) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading due bills...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (ordersError) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center text-destructive">
+          <p>Failed to load due bills</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => refetchDueOrders()}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -72,9 +201,12 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
       <div className="lg:col-span-2 space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Due Bills</h2>
-          <Badge variant="outline" className="text-sm">
-            {dueOrders.length} {dueOrders.length === 1 ? 'Bill' : 'Bills'} Due
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isLoadingOrders && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Badge variant="outline" className="text-sm">
+              {dueOrders.length} {dueOrders.length === 1 ? 'Bill' : 'Bills'} Due
+            </Badge>
+          </div>
         </div>
 
         {dueOrders.length === 0 ? (
@@ -96,54 +228,109 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
             className="space-y-4"
           >
             {dueOrders.map((order) => (
-              <AccordionItem key={order.id} value={order.id} className="border rounded-lg">
-                <AccordionTrigger className="px-4 hover:no-underline">
+              <AccordionItem key={order.id} value={order.id} className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50 rounded-t-lg">
                   <div className="flex justify-between items-center w-full pr-4">
                     <div className="text-left">
-                      <div className="font-semibold">{order.vendor.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        PO: {order.id} • Due: {formatCurrency(order.amountDue)}
+                      <div className="font-semibold text-lg">
+                        {order.vendorName}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        PO: {order.poNumber} • Due: {formatCurrency(order.dueAmount)}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant={order.amountDue > 0 ? "destructive" : "default"}>
-                        Due: {formatCurrency(order.amountDue)}
+                      <Badge variant={order.dueAmount > 0 ? "destructive" : "default"}>
+                        Due: {formatCurrency(order.dueAmount)}
                       </Badge>
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <div className="space-y-4">
+                <AccordionContent className="px-6 pb-6 border-t border-gray-100">
+                  <div className="space-y-6 pt-4">
+                    {/* Order Summary */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium">Order Date:</span>
                         <div className="flex items-center gap-1 mt-1">
                           <Calendar className="w-3 h-3" />
-                          {order.orderDate.toLocaleDateString()}
+                          {formatDate(order.createdAt)}
                         </div>
                       </div>
                       <div>
                         <span className="font-medium">Total Amount:</span>
-                        <div className="font-semibold mt-1">{formatCurrency(order.totalAmount)}</div>
+                        <div className="font-semibold mt-1">
+                          {formatCurrency(order.totalAmount)}
+                        </div>
                       </div>
                       <div>
                         <span className="font-medium">Paid:</span>
                         <div className="text-green-600 font-semibold mt-1">
-                          {formatCurrency(order.amountPaid)}
+                          {formatCurrency(order.totalAmount - order.dueAmount)}
                         </div>
                       </div>
                       <div>
                         <span className="font-medium">Due:</span>
                         <div className="text-destructive font-bold mt-1">
-                          {formatCurrency(order.amountDue)}
+                          {formatCurrency(order.dueAmount)}
                         </div>
                       </div>
                     </div>
 
+                    {/* Payment History */}
+                    {order.payments && order.payments.length > 0 && (
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Receipt className="w-4 h-4" />
+                          <h4 className="font-medium text-sm">Payment History</h4>
+                          <Badge variant="secondary" className="ml-auto">
+                            {order.payments.length} payment{order.payments.length > 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                        
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          {order.payments
+                            .map((payment) => (
+                            <div key={payment.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  {getPaymentMethodIcon(payment.paymentMethod)}
+                                  <span className="text-xs font-medium">
+                                    {getPaymentMethodLabel(payment.paymentMethod)}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  <Clock className="w-3 h-3 inline mr-1" />
+                                  {formatDate(payment.paymentDate)}
+                                </div>
+                                {payment.reference && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Ref: {payment.reference}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-semibold text-green-600">
+                                  {formatCurrency(payment.amount)}
+                                </div>
+                                {payment.notes && (
+                                  <div className="text-xs text-muted-foreground mt-1 max-w-xs truncate">
+                                    {payment.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pay Button */}
                     <Button 
                       onClick={() => handleOrderSelect(order.id)}
                       className="w-full"
                       variant={selectedOrder === order.id ? "default" : "outline"}
+                      size="lg"
                     >
                       {selectedOrder === order.id ? 'Selected for Payment' : 'Pay This Bill'}
                     </Button>
@@ -167,24 +354,28 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
           <CardContent className="space-y-4">
             {selectedOrderData ? (
               <>
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="font-medium">{selectedOrderData.vendor.name}</div>
-                  <div className="text-sm text-muted-foreground">PO: {selectedOrderData.id}</div>
-                  <div className="text-lg font-bold text-destructive mt-1">
-                    Due: {formatCurrency(selectedOrderData.amountDue)}
+                <div className="p-4 bg-muted rounded-lg border">
+                  <div className="font-medium text-lg">
+                    {selectedOrderData.vendorName}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    PO: {selectedOrderData.poNumber}
+                  </div>
+                  <div className="text-lg font-bold text-destructive mt-2">
+                    Due: {formatCurrency(selectedOrderData.dueAmount)}
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="paymentAmount" className="flex justify-between">
+                    <Label htmlFor="paymentAmount" className="flex justify-between mb-2">
                       <span>Payment Amount (BDT)</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="h-auto p-0 text-xs"
-                        onClick={() => setPaymentAmount(selectedOrderData.amountDue)}
+                        onClick={() => setPaymentAmount(selectedOrderData.dueAmount)}
                       >
                         Pay Full Amount
                       </Button>
@@ -195,44 +386,45 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(Number(e.target.value))}
                       min="0"
-                      max={selectedOrderData.amountDue}
+                      max={selectedOrderData.dueAmount}
                       step="0.01"
                       placeholder="Enter payment amount"
+                      className="text-lg"
                     />
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Maximum: {formatCurrency(selectedOrderData.amountDue)}
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Maximum: {formatCurrency(selectedOrderData.dueAmount)}
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                    <Label htmlFor="paymentMethod" className="mb-2">Payment Method</Label>
+                    <Select value={paymentMethod} onValueChange={(value: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE') => setPaymentMethod(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bank" className="flex items-center gap-2">
+                        <SelectItem value="BANK_TRANSFER" className="flex items-center gap-2">
                           <Building className="w-4 h-4" />
                           Bank Transfer
                         </SelectItem>
-                        <SelectItem value="cash" className="flex items-center gap-2">
+                        <SelectItem value="CASH" className="flex items-center gap-2">
                           <Wallet className="w-4 h-4" />
                           Cash
                         </SelectItem>
-                        <SelectItem value="card" className="flex items-center gap-2">
+                        <SelectItem value="CARD" className="flex items-center gap-2">
                           <CreditCard className="w-4 h-4" />
                           Card
                         </SelectItem>
-                        <SelectItem value="mobile banking" className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4" />
-                          Mobile Banking
+                        <SelectItem value="CHEQUE" className="flex items-center gap-2">
+                          <Receipt className="w-4 h-4" />
+                          Cheque
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <Label htmlFor="reference">Reference Number</Label>
+                    <Label htmlFor="reference" className="mb-2">Reference Number</Label>
                     <Input
                       id="reference"
                       value={reference}
@@ -242,22 +434,22 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="text-sm text-blue-800">
-                    <div className="font-medium">Payment Summary</div>
-                    <div className="mt-1 space-y-1">
+                    <div className="font-medium mb-2">Payment Summary</div>
+                    <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Current Due:</span>
-                        <span>{formatCurrency(selectedOrderData.amountDue)}</span>
+                        <span>{formatCurrency(selectedOrderData.dueAmount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>This Payment:</span>
                         <span className="font-semibold">{formatCurrency(paymentAmount)}</span>
                       </div>
-                      <div className="flex justify-between border-t border-blue-300 pt-1">
-                        <span>Remaining Due:</span>
-                        <span className="font-bold">
-                          {formatCurrency(selectedOrderData.amountDue - paymentAmount)}
+                      <div className="flex justify-between border-t border-blue-300 pt-2 mt-2">
+                        <span className="font-medium">Remaining Due:</span>
+                        <span className="font-bold text-lg">
+                          {formatCurrency(selectedOrderData.dueAmount - paymentAmount)}
                         </span>
                       </div>
                     </div>
@@ -267,10 +459,21 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
                 <Button 
                   className="w-full" 
                   onClick={handlePayment}
-                  disabled={paymentAmount <= 0 || paymentAmount > selectedOrderData.amountDue}
+                  disabled={
+                    paymentAmount <= 0 || 
+                    paymentAmount > selectedOrderData.dueAmount ||
+                    isProcessingPayment
+                  }
                   size="lg"
                 >
-                  Record Payment
+                  {isProcessingPayment ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Record Payment'
+                  )}
                 </Button>
 
                 <Button 
@@ -281,14 +484,15 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
                     setPaymentAmount(0);
                     setReference('');
                   }}
+                  disabled={isProcessingPayment}
                 >
                   Select Different Bill
                 </Button>
               </>
             ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <CreditCard className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="font-medium mb-2">No Bill Selected</h3>
+              <div className="text-center text-muted-foreground py-12">
+                <CreditCard className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="font-medium text-lg mb-2">No Bill Selected</h3>
                 <p className="text-sm">Select a bill from the list to make a payment</p>
               </div>
             )}
@@ -297,13 +501,13 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
 
         {/* Quick Stats */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <TrendingDown className="w-4 h-4" />
               Payment Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total Due Bills:</span>
               <span className="font-semibold">{dueOrders.length}</span>
@@ -320,10 +524,10 @@ export function PayDueBills({ purchaseOrders }: PayDueBillsProps) {
                 {formatCurrency(totalPaid)}
               </span>
             </div>
-            <div className="pt-2 border-t">
+            <div className="pt-3 border-t">
               <div className="flex justify-between items-center font-medium">
                 <span>Outstanding Balance:</span>
-                <span className={totalDue > 0 ? "text-destructive" : "text-green-600"}>
+                <span className={totalDue > 0 ? "text-destructive text-lg" : "text-green-600 text-lg"}>
                   {formatCurrency(totalDue)}
                 </span>
               </div>

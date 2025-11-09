@@ -11,6 +11,7 @@ import {
   ApiResponse,
   PurchaseOrderStats,
 } from '../../../types/purchaseOrder';
+import { CreatePurchaseOrderPaymentDto, PaymentSummaryDto } from '@/types/po';
 
 export const purchaseOrdersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -107,6 +108,64 @@ export const purchaseOrdersApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
     }),
+
+    addPayment: builder.mutation({
+      query: ({ purchaseOrderId, paymentData }: { purchaseOrderId: string; paymentData: CreatePurchaseOrderPaymentDto }) => ({
+        url: `/purchase-orders/${purchaseOrderId}/payments`,
+        method: 'POST',
+        body: paymentData,
+      }),
+      invalidatesTags: (_result, _error, { purchaseOrderId }) => [
+        { type: 'PurchaseOrder', id: purchaseOrderId },
+        'PurchaseOrder',
+      ],
+    }),
+
+    getPaymentSummary: builder.query<PaymentSummaryDto, string>({
+      query: (purchaseOrderId: string) => ({
+        url: `/purchase-orders/${purchaseOrderId}/payments/summary`,
+        method: 'GET',
+      }),
+      providesTags: (_result, _error, purchaseOrderId) => [
+        { type: 'PurchaseOrder', id: purchaseOrderId },
+      ],
+    }),
+
+    getPayments: builder.query({
+      query: (purchaseOrderId: string) => ({
+        url: `/purchase-orders/${purchaseOrderId}/payments`,
+        method: 'GET',
+      }),
+      providesTags: (_result, _error, purchaseOrderId) => [
+        { type: 'PurchaseOrder', id: purchaseOrderId },
+      ],
+    }),
+
+    getDuePurchaseOrders: builder.query({
+      query: (params?: { page?: number; limit?: number }) => ({
+        url: '/purchase-orders/due/list',
+        method: 'GET',
+        params,
+      }),
+      providesTags: ['PurchaseOrder'],
+    }),
+
+    updatePayment: builder.mutation({
+      query: ({ paymentId, updateData }: { paymentId: string; updateData: Partial<CreatePurchaseOrderPaymentDto> }) => ({
+        url: `/purchase-orders/payments/${paymentId}`,
+        method: 'PATCH',
+        body: updateData,
+      }),
+      invalidatesTags: ['PurchaseOrder'],
+    }),
+
+    deletePayment: builder.mutation({
+      query: (paymentId: string) => ({
+        url: `/purchase-orders/payments/${paymentId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['PurchaseOrder'],
+    }),
   }),
 });
 
@@ -122,4 +181,10 @@ export const {
   useGetPurchaseOrderStatsQuery,
   useGeneratePONumberQuery,
   useLazyGeneratePONumberQuery,
+  useAddPaymentMutation,
+  useGetPaymentSummaryQuery,
+  useGetPaymentsQuery,
+  useGetDuePurchaseOrdersQuery,
+  useUpdatePaymentMutation,
+  useDeletePaymentMutation,
 } = purchaseOrdersApi;

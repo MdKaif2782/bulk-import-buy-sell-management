@@ -1,83 +1,75 @@
+// components/inventory-dialog.tsx
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Inventory, UpdateInventoryRequest } from "@/types/inventory"
 
-interface Product {
-  id: string
-  name: string
-  sku: string
-  category: string
-  quantity: number
-  reorderLevel: number
-  unitPrice: number
-  supplier: string
-}
-
-interface ProductDialogProps {
+interface InventoryDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (product: Product | Omit<Product, "id">) => void
-  product?: Product | null
+  onSave: (data: UpdateInventoryRequest) => void
+  inventory?: Inventory | null
+  isLoading?: boolean
 }
 
-export function ProductDialog({ isOpen, onClose, onSave, product }: ProductDialogProps) {
-  const [formData, setFormData] = useState<Omit<Product, "id">>({
-    name: "",
-    sku: "",
-    category: "",
-    quantity: 0,
-    reorderLevel: 0,
-    unitPrice: 0,
-    supplier: "",
+export function InventoryDialog({ isOpen, onClose, onSave, inventory, isLoading = false }: InventoryDialogProps) {
+  const [formData, setFormData] = useState<UpdateInventoryRequest>({
+    productName: "",
+    description: "",
+    expectedSalePrice: 0,
+    minStockLevel: 0,
+    maxStockLevel: 0,
+    barcode: "",
   })
 
   useEffect(() => {
-    if (product) {
-      const { id, ...rest } = product
-      setFormData(rest)
+    if (inventory) {
+      setFormData({
+        productName: inventory.productName,
+        description: inventory.description || "",
+        expectedSalePrice: inventory.expectedSalePrice,
+        minStockLevel: inventory.minStockLevel || 0,
+        maxStockLevel: inventory.maxStockLevel || 0,
+        barcode: inventory.barcode || "",
+      })
     } else {
       setFormData({
-        name: "",
-        sku: "",
-        category: "",
-        quantity: 0,
-        reorderLevel: 0,
-        unitPrice: 0,
-        supplier: "",
+        productName: "",
+        description: "",
+        expectedSalePrice: 0,
+        minStockLevel: 0,
+        maxStockLevel: 0,
+        barcode: "",
       })
     }
-  }, [product, isOpen])
+  }, [inventory, isOpen])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "name" || name === "sku" || name === "category" || name === "supplier" ? value : Number(value),
+      [name]: name === "productName" || name === "description" || name === "barcode" ? value : Number(value),
     }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (product) {
-      onSave({ ...formData, id: product.id } as Product)
-    } else {
-      onSave(formData)
-    }
+    onSave(formData)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add New Product"}</DialogTitle>
+          <DialogTitle>{inventory ? "Edit Product" : "Add New Product"}</DialogTitle>
           <DialogDescription>
-            {product
+            {inventory
               ? "Update the product details below."
               : "Fill in the product information to add it to your inventory."}
           </DialogDescription>
@@ -85,11 +77,11 @@ export function ProductDialog({ isOpen, onClose, onSave, product }: ProductDialo
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Product Name</Label>
+            <Label htmlFor="productName">Product Name</Label>
             <Input
-              id="name"
-              name="name"
-              value={formData.name}
+              id="productName"
+              name="productName"
+              value={formData.productName}
               onChange={handleChange}
               placeholder="e.g., Cotton Fabric Roll"
               required
@@ -97,50 +89,52 @@ export function ProductDialog({ isOpen, onClose, onSave, product }: ProductDialo
           </div>
 
           <div>
-            <Label htmlFor="sku">SKU</Label>
-            <Input
-              id="sku"
-              name="sku"
-              value={formData.sku}
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
               onChange={handleChange}
-              placeholder="e.g., CF-001"
-              required
+              placeholder="Product description..."
+              rows={3}
             />
           </div>
 
           <div>
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="barcode">Barcode</Label>
             <Input
-              id="category"
-              name="category"
-              value={formData.category}
+              id="barcode"
+              name="barcode"
+              value={formData.barcode}
               onChange={handleChange}
-              placeholder="e.g., Textiles"
-              required
+              placeholder="e.g., 123456789012"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="expectedSalePrice">Expected Sale Price (৳)</Label>
               <Input
-                id="quantity"
-                name="quantity"
+                id="expectedSalePrice"
+                name="expectedSalePrice"
                 type="number"
-                value={formData.quantity}
+                min="0"
+                step="0.01"
+                value={formData.expectedSalePrice}
                 onChange={handleChange}
-                placeholder="0"
+                placeholder="0.00"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="reorderLevel">Reorder Level</Label>
+              <Label htmlFor="minStockLevel">Min Stock Level</Label>
               <Input
-                id="reorderLevel"
-                name="reorderLevel"
+                id="minStockLevel"
+                name="minStockLevel"
                 type="number"
-                value={formData.reorderLevel}
+                min="0"
+                value={formData.minStockLevel}
                 onChange={handleChange}
                 placeholder="0"
                 required
@@ -149,35 +143,25 @@ export function ProductDialog({ isOpen, onClose, onSave, product }: ProductDialo
           </div>
 
           <div>
-            <Label htmlFor="unitPrice">Unit Price (৳)</Label>
+            <Label htmlFor="maxStockLevel">Max Stock Level</Label>
             <Input
-              id="unitPrice"
-              name="unitPrice"
+              id="maxStockLevel"
+              name="maxStockLevel"
               type="number"
-              value={formData.unitPrice}
+              min="0"
+              value={formData.maxStockLevel}
               onChange={handleChange}
               placeholder="0"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="supplier">Supplier</Label>
-            <Input
-              id="supplier"
-              name="supplier"
-              value={formData.supplier}
-              onChange={handleChange}
-              placeholder="e.g., Supplier A"
-              required
             />
           </div>
 
           <div className="flex gap-3 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit">{product ? "Update Product" : "Add Product"}</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : inventory ? "Update Product" : "Add Product"}
+            </Button>
           </div>
         </form>
       </DialogContent>

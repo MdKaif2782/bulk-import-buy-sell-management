@@ -1,31 +1,38 @@
+// components/inventory-details-dialog.tsx
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Product, Investor, RecentOrder } from "@/types/product"
-import { Calendar, Mail, Phone, FileText } from "lucide-react"
+import { Inventory } from "@/types/inventory"
+import { FileText, Package, Tag, BarChart3 } from "lucide-react"
 
-interface ProductDetailsDialogProps {
+interface InventoryDetailsDialogProps {
   isOpen: boolean
   onClose: () => void
-  product: Product | null
+  inventory: Inventory | null
 }
 
-export function ProductDetailsDialog({ isOpen, onClose, product }: ProductDetailsDialogProps) {
-  if (!product) return null
+export function InventoryDetailsDialog({ isOpen, onClose, inventory }: InventoryDetailsDialogProps) {
+  if (!inventory) return null
 
-  const totalInvestorPercentage = product.investors.reduce((sum, investor) => sum + investor.sharePercentage, 0)
-  const selfFundedPercentage = 100 - totalInvestorPercentage
+  const stockStatus = inventory.quantity <= (inventory.minStockLevel || 0) ? "Low" : 
+                     inventory.quantity <= (inventory.minStockLevel || 0) * 2 ? "Medium" : "Good"
+
+  const stockStatusColor = {
+    Low: "destructive",
+    Medium: "secondary",
+    Good: "default"
+  }[stockStatus]
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Product Details - {product.name}
+            Product Details - {inventory.productName}
           </DialogTitle>
         </DialogHeader>
 
@@ -33,131 +40,98 @@ export function ProductDetailsDialog({ isOpen, onClose, product }: ProductDetail
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">SKU</label>
-                <p className="text-sm">{product.sku}</p>
+                <label className="text-sm font-medium text-muted-foreground">Product Code</label>
+                <p className="text-sm font-mono">{inventory.productCode}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Category</label>
-                <p className="text-sm">{product.category}</p>
+                <label className="text-sm font-medium text-muted-foreground">Barcode</label>
+                <p className="text-sm font-mono">{inventory.barcode || "N/A"}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Supplier</label>
-                <p className="text-sm">{product.supplier}</p>
-              </div>
-              {product.poNo && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Purchase Order No.</label>
-                  <p className="text-sm font-mono">{product.poNo}</p>
-                </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
-                <p className="text-sm">
-                  {product.quantity} units
-                  {product.quantity <= product.reorderLevel && (
-                    <Badge variant="destructive" className="ml-2">
-                      Low Stock
-                    </Badge>
-                  )}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Reorder Level</label>
-                <p className="text-sm">{product.reorderLevel} units</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Unit Price</label>
-                <p className="text-sm">${product.unitPrice}</p>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">Description</label>
+                <p className="text-sm">{inventory.description || "No description"}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Investor Information */}
+          {/* Stock Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Investment Structure</CardTitle>
-              <CardDescription>
-                Total investment coverage: {totalInvestorPercentage}%
-                {selfFundedPercentage > 0 && `, Self-funded: ${selfFundedPercentage}%`}
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Stock Information
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {product.investors.length > 0 ? (
-                <div className="space-y-4">
-                  {product.investors.map((investor) => (
-                    <div key={investor.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium">
-                            {investor.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{investor.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="w-3 h-3" />
-                            <span>{investor.email}</span>
-                            <Phone className="w-3 h-3 ml-2" />
-                            <span>{investor.phone}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{investor.sharePercentage}%</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${investor.investmentAmount.toLocaleString()}
-                        </p>
-                        <Badge variant={investor.status === "active" ? "default" : "secondary"} className="mt-1">
-                          {investor.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">No investors listed</p>
-              )}
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Current Quantity</label>
+                <p className="text-sm">{inventory.quantity} units</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Stock Status</label>
+                <Badge variant={stockStatusColor as any} className="mt-1">
+                  {stockStatus} Stock
+                </Badge>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Min Stock Level</label>
+                <p className="text-sm">{inventory.minStockLevel || 0} units</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Max Stock Level</label>
+                <p className="text-sm">{inventory.maxStockLevel || "Not set"}</p>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Recent Orders */}
-          {product.recentOrders.length > 0 && (
+          {/* Pricing Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                Pricing Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Purchase Price</label>
+                <p className="text-sm">৳ {inventory.purchasePrice.toLocaleString()}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Expected Sale Price</label>
+                <p className="text-sm">৳ {inventory.expectedSalePrice.toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Purchase Order Information */}
+          {inventory.purchaseOrder && (
             <Card>
               <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>Latest company orders for this product</CardDescription>
+                <CardTitle>Purchase Order Details</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {product.recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{order.company}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(order.orderDate).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{order.quantity} units</p>
-                        <p className="text-sm text-muted-foreground">${order.amount.toLocaleString()}</p>
-                        <Badge 
-                          variant={
-                            order.status === "completed" ? "default" : 
-                            order.status === "pending" ? "secondary" : "destructive"
-                          }
-                          className="mt-1"
-                        >
-                          {order.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">PO Number</label>
+                  <p className="text-sm font-mono">{inventory.purchaseOrder.poNumber}</p>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Vendor</label>
+                  <p className="text-sm">{inventory.purchaseOrder.vendorName}</p>
+                </div>
+                {inventory.purchaseOrder.vendorCountry && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Vendor Country</label>
+                    <p className="text-sm">{inventory.purchaseOrder.vendorCountry}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

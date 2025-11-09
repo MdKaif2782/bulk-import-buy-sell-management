@@ -3,7 +3,7 @@ import { useAppSelector } from "./useRedux"
 
 export const useAuth = () => {
   const user = useAppSelector(selectCurrentUser)
-  const role = localStorage.getItem("role")
+  const role = (window!==undefined)?localStorage.getItem("role"):"ADMIN"
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
 
   const hasRole = (requiredRole: string) => {
