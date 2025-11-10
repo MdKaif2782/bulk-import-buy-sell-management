@@ -1,242 +1,278 @@
-"use client"
+import React, { useState } from 'react';
+import { useCreateBillMutation, useAddPaymentMutation } from '@/lib/store/api/billApi';
+import { AvailableBuyerPO } from '@/types/bill';
+import { Calendar, Building, DollarSign } from 'lucide-react';
+import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { PurchaseOrder, Bill } from "@/types/billing"
-import { Calendar, Building, DollarSign } from "lucide-react"
-import { useState } from "react"
-
-interface BillDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  purchaseOrder: PurchaseOrder | null
-  onSave: (billData: Omit<Bill, "id" | "billNumber">) => void
+interface CreateBillDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  availablePOs: AvailableBuyerPO[];
 }
 
-export function BillDialog({ isOpen, onClose, purchaseOrder, onSave }: BillDialogProps) {
-  const [formData, setFormData] = useState({
-    dueDate: "",
-    notes: "Thank you for your business. Please make payment within 30 days.",
-    terms: "Net 30 days"
-  })
+export const CreateBillDialog: React.FC<CreateBillDialogProps> = ({
+  open,
+  onOpenChange,
+  availablePOs,
+}) => {
+  const [selectedPO, setSelectedPO] = useState<AvailableBuyerPO | null>(null);
+  const [vatRegNo, setVatRegNo] = useState('');
+  const [code, setCode] = useState('');
+  const [vendorNo, setVendorNo] = useState('');
+  const [billDate, setBillDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  
+  // Payment fields
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD'>('CASH');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
 
-  if (!purchaseOrder) return null
+  const [createBill, { isLoading: creatingBill }] = useCreateBillMutation();
+  const [addPayment, { isLoading: addingPayment }] = useAddPaymentMutation();
 
-  const calculateSubtotal = () => {
-    return purchaseOrder.lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
-  }
+  const isLoading = creatingBill || addingPayment;
 
-  const calculateTaxAmount = (subtotal: number) => {
-    return (subtotal * purchaseOrder.taxPercentage) / 100
-  }
+  const handlePOSelect = (poId: string) => {
+    const po = availablePOs.find(p => p.id === poId);
+    setSelectedPO(po || null);
+    setPaymentAmount(po?.remainingAmount || 0);
+  };
 
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal()
-    const taxAmount = calculateTaxAmount(subtotal)
-    return subtotal + taxAmount + purchaseOrder.shippingCharges
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const subtotal = calculateSubtotal()
-    const taxAmount = calculateTaxAmount(subtotal)
-    const totalAmount = calculateTotal()
+    if (!selectedPO) return;
 
-    const billData: Omit<Bill, "id" | "billNumber"> = {
-      poNumber: purchaseOrder.poNumber,
-      companyName: purchaseOrder.companyName,
-      companyEmail: purchaseOrder.companyEmail,
-      companyAddress: purchaseOrder.companyAddress,
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: formData.dueDate,
-      status: "draft",
-      items: purchaseOrder.lineItems.map(item => ({
-        id: item.id,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        taxRate: purchaseOrder.taxPercentage,
-        amount: item.quantity * item.unitPrice
-      })),
-      subtotal,
-      taxAmount,
-      totalAmount,
-      amountPaid: 0,
-      balanceDue: totalAmount,
-      notes: formData.notes,
-      terms: formData.terms,
-      createdFromPO: purchaseOrder.id
+    try {
+      // Create the bill
+      const billResponse = await createBill({
+        buyerPOId: selectedPO.id,
+        vatRegNo,
+        code,
+        vendorNo,
+        billDate,
+      }).unwrap();
+
+      // Add the first payment
+      if (paymentAmount > 0) {
+        await addPayment({
+          id: billResponse.id,
+          data: {
+            amount: paymentAmount,
+            paymentMethod,
+            reference: paymentReference || undefined,
+            notes: paymentNotes || undefined,
+          },
+        }).unwrap();
+      }
+
+      // Reset form and close dialog
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to create bill:', error);
     }
+  };
 
-    onSave(billData)
-  }
-
-  const subtotal = calculateSubtotal()
-  const taxAmount = calculateTaxAmount(subtotal)
-  const totalAmount = calculateTotal()
+  const resetForm = () => {
+    setSelectedPO(null);
+    setVatRegNo('');
+    setCode('');
+    setVendorNo('');
+    setBillDate(format(new Date(), 'yyyy-MM-dd'));
+    setPaymentAmount(0);
+    setPaymentMethod('CASH');
+    setPaymentReference('');
+    setPaymentNotes('');
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Invoice</DialogTitle>
+          <DialogTitle>Create New Bill</DialogTitle>
+          <DialogDescription>
+            Create a new bill and add the first payment for the selected purchase order.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PO Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="w-5 h-5" />
-                Purchase Order Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>PO Number</Label>
-                <Input value={purchaseOrder.poNumber} disabled />
+          {/* Bill Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Bill Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="po">Purchase Order *</Label>
+                <Select value={selectedPO?.id || ''} onValueChange={handlePOSelect} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select PO" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePOs.map((po) => (
+                      <SelectItem key={po.id} value={po.id}>
+                        {po.poNumber} - {po.quotation.companyName} (৳{po.remainingAmount})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Label>Company Name</Label>
-                <Input value={purchaseOrder.companyName} disabled />
-              </div>
-              <div>
-                <Label>Company Email</Label>
-                <Input value={purchaseOrder.companyEmail} disabled />
-              </div>
-              <div>
-                <Label>Total Order Value</Label>
-                <Input value={`৳ ${purchaseOrder.totalAmount.toLocaleString()}`} disabled />
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Billing Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Billing Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dueDate">Due Date *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="billDate">Bill Date *</Label>
                 <Input
-                  id="dueDate"
+                  id="billDate"
                   type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                  value={billDate}
+                  onChange={(e) => setBillDate(e.target.value)}
                   required
                 />
               </div>
-              <div>
-                <Label>Issue Date</Label>
-                <Input value={new Date().toISOString().split('T')[0]} disabled />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Add any notes for the customer..."
-                  rows={3}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="terms">Terms & Conditions</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="vatRegNo">VAT Registration No *</Label>
                 <Input
-                  id="terms"
-                  value={formData.terms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
-                  placeholder="e.g., Net 30 days"
+                  id="vatRegNo"
+                  type="text"
+                  value={vatRegNo}
+                  onChange={(e) => setVatRegNo(e.target.value)}
+                  required
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Order Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Items</CardTitle>
-              <CardDescription>
-                Items to be billed as per purchase order
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left py-3 px-4 font-medium">Description</th>
-                      <th className="text-right py-3 px-4 font-medium">Quantity</th>
-                      <th className="text-right py-3 px-4 font-medium">Unit Price</th>
-                      <th className="text-right py-3 px-4 font-medium">Tax Rate</th>
-                      <th className="text-right py-3 px-4 font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchaseOrder.lineItems.map((item) => (
-                      <tr key={item.id} className="border-b">
-                        <td className="py-3 px-4">{item.description}</td>
-                        <td className="py-3 px-4 text-right">{item.quantity}</td>
-                        <td className="py-3 px-4 text-right">৳ {item.unitPrice.toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right">{purchaseOrder.taxPercentage}%</td>
-                        <td className="py-3 px-4 text-right font-medium">
-                          ৳ {(item.quantity * item.unitPrice).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-2">
+                <Label htmlFor="code">Code *</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  required
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-w-xs ml-auto">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span>৳ {subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax ({purchaseOrder.taxPercentage}%):</span>
-                  <span>৳ {taxAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping:</span>
-                  <span>৳ {purchaseOrder.shippingCharges.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2 font-bold text-lg">
-                  <span>Total:</span>
-                  <span>৳ {totalAmount.toLocaleString()}</span>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="vendorNo">Vendor No *</Label>
+                <Input
+                  id="vendorNo"
+                  type="text"
+                  value={vendorNo}
+                  onChange={(e) => setVendorNo(e.target.value)}
+                  required
+                />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
+          {/* Selected PO Details */}
+          {selectedPO && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">PO Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedPO.quotation.companyName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>{format(new Date(selectedPO.poDate), 'MMM dd, yyyy')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span>Total: ৳{selectedPO.quotation.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span>Remaining: ৳{selectedPO.remainingAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* First Payment */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Initial Payment</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentAmount">Payment Amount *</Label>
+                <Input
+                  id="paymentAmount"
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  min="0"
+                  max={selectedPO?.remainingAmount || 0}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod">Payment Method *</Label>
+                <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                    <SelectItem value="CARD">Card</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reference">Reference</Label>
+                <Input
+                  id="reference"
+                  type="text"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="Transaction ID, cheque number, etc."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  type="text"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="Additional payment notes..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              Create Invoice
+            <Button
+              type="submit"
+              disabled={isLoading || !selectedPO}
+            >
+              {isLoading ? 'Creating...' : 'Create Bill & Payment'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};

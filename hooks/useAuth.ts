@@ -5,7 +5,8 @@ export const useAuth = () => {
   const user = useAppSelector(selectCurrentUser)
   const role = typeof window !== "undefined" ? localStorage.getItem("role") : "ADMIN"
 
-  const isAuthenticated = useAppSelector(selectIsAuthenticated)
+  //const isAuthenticated = useAppSelector(selectIsAuthenticated)
+  const isAuthenticated = typeof window !== "undefined" ? (localStorage.getItem("accessToken")?true:false) : false
 
   const hasRole = (requiredRole: string) => {
     if (!role) return false

@@ -24,8 +24,8 @@ import { useLanguage } from "./language-provider"
 
 const navItemsKeys = [
   { href: "/", labelKey: "dashboard", icon: Home },
-  { href: "/products", labelKey: "products", icon: Package },
   { href: "/purchases", labelKey: "purchases", icon: ShoppingCart },
+  { href: "/products", labelKey: "products", icon: Package },
   { href: "/investors", labelKey: "investors", icon: Users },
   { href: "/quotations", labelKey: "quotations", icon: FileText },
   { href: "/orders", labelKey: "Orders", icon: ListOrdered },
