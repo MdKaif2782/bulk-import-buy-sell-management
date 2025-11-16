@@ -17,6 +17,8 @@ import {
   PackagePlus,
   ListOrdered,
   TruckIcon,
+  PersonStandingIcon,
+  ContactIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -31,6 +33,7 @@ const navItemsKeys = [
   { href: "/orders", labelKey: "Orders", icon: ListOrdered },
   { href: "/challan", labelKey: "Challans", icon: TruckIcon },
   { href: "/billing", labelKey: "Billing", icon: DollarSign },
+   { href: "/salary", labelKey: "Salary", icon: ContactIcon },
   { href: "/expenses", labelKey: "expenses", icon: TrendingUp },
   { href: "/reports", labelKey: "reports", icon: BarChart3 },
   { href: "/settings", labelKey: "settings", icon: Settings },
