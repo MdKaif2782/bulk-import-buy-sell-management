@@ -107,7 +107,7 @@ export default function ExpenseTable({ expenses, loading, onEdit, onDeleteSucces
                     )}
                   </div>
                 </TableCell>
-                <TableCell>${expense.amount.toLocaleString()}</TableCell>
+                <TableCell>৳{expense.amount.toLocaleString()}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn(getCategoryColor(expense.category))}>
                     {expense.category.replace('_', ' ')}

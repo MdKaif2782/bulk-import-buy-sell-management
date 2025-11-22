@@ -12,6 +12,8 @@ export interface Investor {
   updatedAt: string;
   investments?: Investment[];
   profitDistributions?: ProfitDistribution[];
+  payables?: InvestorPayable[];
+  payments?: InvestorPayment[];
 }
 
 export interface Investment {
@@ -41,6 +43,72 @@ export interface ProfitDistribution {
   };
 }
 
+// Payment Management Types
+export interface InvestorPayment {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: PaymentMethod;
+  reference?: string;
+  notes?: string;
+  status: InvestorPaymentStatus;
+  investorId: string;
+  payableId?: string;
+  investorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvestorPayable {
+  id: string;
+  dueAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: PayableStatus;
+  dueDate?: string;
+  investorId: string;
+  purchaseOrderId: string;
+  investorName: string;
+  poNumber: string;
+  vendorName: string;
+  createdAt: string;
+  updatedAt: string;
+  payments?: InvestorPayment[];
+}
+
+export interface InvestorDueSummary {
+  investorId: string;
+  investorName: string;
+  totalDue: number;
+  totalPaid: number;
+  totalRemaining: number;
+  payables: InvestorPayable[];
+}
+
+export interface PaymentHistoryResponse {
+  payments: InvestorPayment[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Request Types
+export interface CreateInvestorPaymentData {
+  amount: number;
+  paymentMethod: PaymentMethod;
+  reference?: string;
+  notes?: string;
+  payableId?: string;
+}
+
+export interface CreatePayableData {
+  purchaseOrderId: string;
+  dueAmount: number;
+  dueDate?: string;
+}
+
+// Response Types
 export interface InvestorListResponse {
   investors: Investor[];
   pagination: {
@@ -111,4 +179,32 @@ export interface InvestorQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+}
+
+export interface PaymentHistoryParams {
+  page?: number;
+  limit?: number;
+}
+
+// Enums
+export enum PaymentMethod {
+  CASH = 'CASH',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  CHEQUE = 'CHEQUE',
+  CARD = 'CARD'
+}
+
+export enum InvestorPaymentStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum PayableStatus {
+  PENDING = 'PENDING',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  PAID = 'PAID',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
 }

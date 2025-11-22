@@ -46,9 +46,9 @@ export default function ExpenseAnalytics() {
                   <span className="font-medium">{item.category.replace('_', ' ')}</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold">${item.total.toLocaleString()}</div>
+                  <div className="font-bold">৳{item.total.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">
-                    {item.count} expenses ({item.percentage}%)
+                    {item.count} expenses ({item.percentage.toFixed(2)}%)
                   </div>
                 </div>
               </div>
@@ -68,12 +68,12 @@ export default function ExpenseAnalytics() {
               <div key={item.category} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{item.category.replace('_', ' ')}</span>
-                  <span>${item.total.toLocaleString()}</span>
+                  <span>৳{item.total.toLocaleString()}</span>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-2">
                   <div
                     className={cn("h-2 rounded-full", getCategoryColor(item.category))}
-                    style={{ width: `${item.percentage}%` }}
+                    style={{ width: `${item.percentage.toFixed(2)}%` }}
                   />
                 </div>
               </div>

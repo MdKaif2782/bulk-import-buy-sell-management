@@ -26,7 +26,7 @@ export default function ExpenseTrends() {
                 {format(new Date(trend.month + '-01'), 'MMMM yyyy')}
               </div>
               <div className="text-2xl font-bold text-primary">
-                ${trend.amount.toLocaleString()}
+                ৳{trend.amount.toLocaleString()}
               </div>
             </div>
           ))}

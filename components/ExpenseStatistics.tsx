@@ -26,7 +26,7 @@ export default function ExpenseStatistics() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${statistics?.total?.toLocaleString() || '0'}
+            ৳{statistics?.total?.toLocaleString() || '0'}
           </div>
           <p className="text-xs text-muted-foreground">
             {statistics?.transactionCount} transactions
@@ -41,10 +41,10 @@ export default function ExpenseStatistics() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">
-            ${statistics?.approved?.toLocaleString() || '0'}
+            ৳{statistics?.approved?.toLocaleString() || '0'}
           </div>
           <p className="text-xs text-muted-foreground">
-            Average: ${statistics?.average?.toFixed(2) || '0.00'}
+            Average: ৳{statistics?.average?.toFixed(2) || '0.00'}
           </p>
         </CardContent>
       </Card>
@@ -56,7 +56,7 @@ export default function ExpenseStatistics() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-yellow-600">
-            ${statistics?.pending?.toLocaleString() || '0'}
+            ৳{statistics?.pending?.toLocaleString() || '0'}
           </div>
           <p className="text-xs text-muted-foreground">
             Awaiting approval

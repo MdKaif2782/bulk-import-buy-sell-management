@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit2, Trash2, ToggleLeft, ToggleRight, Loader2 } from "lucide-react"
+import { Edit2, Trash2, ToggleLeft, ToggleRight, Loader2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -19,10 +19,18 @@ interface InvestorTableProps {
   onEdit: (investor: ApiInvestor) => void
   onDelete: (id: string) => void
   onToggleStatus: (id: string) => void
+  onViewPayments: (investor: ApiInvestor) => void
   isLoading?: boolean
 }
 
-export function InvestorTable({ investors, onEdit, onDelete, onToggleStatus, isLoading = false }: InvestorTableProps) {
+export function InvestorTable({ 
+  investors, 
+  onEdit, 
+  onDelete, 
+  onToggleStatus, 
+  onViewPayments,
+  isLoading = false 
+}: InvestorTableProps) {
   const getStatusBadge = (isActive: boolean) => {
     return isActive 
       ? "bg-green-100 text-green-800 border border-green-200" 
@@ -114,7 +122,17 @@ export function InvestorTable({ investors, onEdit, onDelete, onToggleStatus, isL
                 </span>
               </td>
               <td className="py-3 px-4">
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => onViewPayments(investor)} 
+                    className="h-8 w-8 p-0"
+                    title="View Payments"
+                  >
+                    <Eye className="w-4 h-4 text-blue-600" />
+                  </Button>
+                  
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -134,6 +152,7 @@ export function InvestorTable({ investors, onEdit, onDelete, onToggleStatus, isL
                     size="sm" 
                     onClick={() => onEdit(investor)} 
                     className="h-8 w-8 p-0"
+                    title="Edit Investor"
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -144,6 +163,7 @@ export function InvestorTable({ investors, onEdit, onDelete, onToggleStatus, isL
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        title="Delete Investor"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
