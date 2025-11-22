@@ -19,6 +19,7 @@ import {
   TruckIcon,
   PersonStandingIcon,
   ContactIcon,
+  PackageMinus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -28,6 +29,7 @@ const navItemsKeys = [
   { href: "/", labelKey: "dashboard", icon: Home },
   { href: "/purchases", labelKey: "purchases", icon: ShoppingCart },
   { href: "/products", labelKey: "products", icon: Package },
+  { href: "/retail-sale", labelKey: "Retail Sale", icon: PackageMinus },
   { href: "/investors", labelKey: "investors", icon: Users },
   { href: "/quotations", labelKey: "quotations", icon: FileText },
   { href: "/orders", labelKey: "Orders", icon: ListOrdered },
