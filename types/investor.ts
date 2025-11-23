@@ -1,3 +1,11 @@
+import { PurchaseOrderItem } from "./purchaseOrder";
+
+export enum PaymentMethod {
+  CASH = 'CASH',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  CHEQUE = 'CHEQUE',
+  CARD = 'CARD'
+}
 export interface Investor {
   id: string;
   name: string;
@@ -12,10 +20,16 @@ export interface Investor {
   updatedAt: string;
   investments?: Investment[];
   profitDistributions?: ProfitDistribution[];
-  payables?: InvestorPayable[];
-  payments?: InvestorPayment[];
 }
-
+export interface InvestorListResponse {
+  investors: Investor[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
 export interface Investment {
   id: string;
   investmentAmount: number;
@@ -40,82 +54,6 @@ export interface ProfitDistribution {
     billNumber: string;
     totalAmount: number;
     billDate: string;
-  };
-}
-
-// Payment Management Types
-export interface InvestorPayment {
-  id: string;
-  amount: number;
-  paymentDate: string;
-  paymentMethod: PaymentMethod;
-  reference?: string;
-  notes?: string;
-  status: InvestorPaymentStatus;
-  investorId: string;
-  payableId?: string;
-  investorName: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface InvestorPayable {
-  id: string;
-  dueAmount: number;
-  paidAmount: number;
-  remainingAmount: number;
-  status: PayableStatus;
-  dueDate?: string;
-  investorId: string;
-  purchaseOrderId: string;
-  investorName: string;
-  poNumber: string;
-  vendorName: string;
-  createdAt: string;
-  updatedAt: string;
-  payments?: InvestorPayment[];
-}
-
-export interface InvestorDueSummary {
-  investorId: string;
-  investorName: string;
-  totalDue: number;
-  totalPaid: number;
-  totalRemaining: number;
-  payables: InvestorPayable[];
-}
-
-export interface PaymentHistoryResponse {
-  payments: InvestorPayment[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-// Request Types
-export interface CreateInvestorPaymentData {
-  amount: number;
-  paymentMethod: PaymentMethod;
-  reference?: string;
-  notes?: string;
-  payableId?: string;
-}
-
-export interface CreatePayableData {
-  purchaseOrderId: string;
-  dueAmount: number;
-  dueDate?: string;
-}
-
-// Response Types
-export interface InvestorListResponse {
-  investors: Investor[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
   };
 }
 
@@ -182,17 +120,11 @@ export interface InvestorQueryParams {
 }
 
 export interface PaymentHistoryParams {
-  page?: number;
-  limit?: number;
+  investorId:string,
 }
 
 // Enums
-export enum PaymentMethod {
-  CASH = 'CASH',
-  BANK_TRANSFER = 'BANK_TRANSFER',
-  CHEQUE = 'CHEQUE',
-  CARD = 'CARD'
-}
+
 
 export enum InvestorPaymentStatus {
   PENDING = 'PENDING',
@@ -207,4 +139,137 @@ export enum PayableStatus {
   PAID = 'PAID',
   OVERDUE = 'OVERDUE',
   CANCELLED = 'CANCELLED'
+}
+
+export interface InvestorInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  taxId?: string;
+  bankAccount?: string;
+  bankName?: string;
+  joinDate: string;
+  status: string;
+}
+
+export enum POStatus {
+  PENDING = 'PENDING',
+  ORDERED = 'ORDERED',
+  SHIPPED = 'SHIPPED',
+  RECEIVED = 'RECEIVED',
+  CANCELLED = 'CANCELLED'
+}
+
+export interface InvestmentBreakdown {
+  investmentId: string;
+  poId: string;
+  poNumber: string;
+  vendorName: string;
+  investmentAmount: number;
+  profitPercentage: number;
+  poStatus: POStatus;
+  orderDate: string;
+  receivedDate?: string;
+  
+  // Financial metrics
+  poCost: number;
+  poRevenue: number;
+  poCollected: number;
+  poProfit: number;
+  poPayableNow: number;
+  
+  // Performance metrics
+  roi: number;
+  profitEarned: number;
+  payableNow: number;
+
+  // Products
+  products: PurchaseOrderItem[];
+}
+
+export interface PaymentHistoryItem {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  description?: string;
+  paymentMethod?: PaymentMethod;
+  reference?: string;
+}
+
+export interface RecentActivity {
+  type: 'PO_RECEIVED' | 'PAYMENT_RECEIVED' | 'INVESTMENT_ADDED';
+  date: string;
+  description: string;
+  amount: number;
+  method?: PaymentMethod;
+}
+
+export interface ProductSale {
+  poId: string;
+  poNumber: string;
+  productName: string;
+  productCode: string;
+  purchasePrice: number;
+  expectedSalePrice: number;
+  totalSold: number;
+  totalRevenue: number;
+  customers: string[];
+}
+
+export interface DueSummary {
+  // Investor Information
+  investor: InvestorInfo;
+  
+  // Summary Section
+  summary: {
+    totalInvestment: number;
+    totalRevenue: number;
+    totalCollected: number;
+    totalProfitEarned: number;
+    totalPaid: number;
+    totalDue: number;
+    payableNow: number;
+    overallROI: number;
+    collectionEfficiency: number;
+    activeInvestments: number;
+  };
+
+  // Detailed Breakdowns
+  investmentBreakdown: InvestmentBreakdown[];
+  productSales: ProductSale[];
+  paymentHistory: PaymentHistoryItem[];
+
+  // Timeline & Recent Activity
+  recentActivity: RecentActivity[];
+}
+
+// ==================== Payment & Payable Types ====================
+export interface InvestorPayment {
+  id: string;
+  investorId: string;
+  amount: number;
+  paymentDate: string;
+  description?: string;
+  paymentMethod?: PaymentMethod;
+  reference?: string;
+  investor?: Investor;
+}
+
+export interface CreateInvestorPaymentData {
+  amount: number;
+  description?: string;
+  paymentMethod?: PaymentMethod;
+  reference?: string;
+}
+
+export interface PaymentResponse {
+  success: boolean;
+  payment: InvestorPayment;
+  newBalance: {
+    previousDue: number;
+    newDue: number;
+    remainingPayable: number;
+  };
+  investor: InvestorInfo;
 }

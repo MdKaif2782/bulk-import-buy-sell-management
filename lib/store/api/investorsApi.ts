@@ -1,20 +1,17 @@
 import { baseApi } from './baseApi';
 import {
   Investor,
-  InvestorListResponse,
   InvestorStatistics,
   InvestorPerformance,
   EquityDistribution,
   CreateInvestorData,
   UpdateInvestorData,
   InvestorQueryParams,
-  InvestorPayment,
-  InvestorPayable,
-  InvestorDueSummary,
-  PaymentHistoryResponse,
+  DueSummary,
   CreateInvestorPaymentData,
-  CreatePayableData,
   PaymentHistoryParams,
+  PaymentResponse,
+  InvestorListResponse,
 } from '../../../types/investor';
 
 export const investorsApi = baseApi.injectEndpoints({
@@ -26,13 +23,6 @@ export const investorsApi = baseApi.injectEndpoints({
         method: 'GET',
         params: params as Record<string, any>,
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.investors.map(({ id }) => ({ type: 'Investor' as const, id })),
-              { type: 'Investor', id: 'LIST' },
-            ]
-          : [{ type: 'Investor', id: 'LIST' }],
     }),
 
     getInvestor: builder.query<Investor, string>({
@@ -86,6 +76,22 @@ export const investorsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // ==================== Enhanced Due Summary & Payments ====================
+    getInvestorDueSummary: builder.query<DueSummary, string>({
+      query: (id: string) => ({
+        url: `/investors/${id}/due-summary`,
+        method: 'GET',
+      }),
+    }),
+
+    payInvestor: builder.mutation<PaymentResponse, { id: string; data: CreateInvestorPaymentData }>({
+      query: ({ id, data }: { id: string; data: CreateInvestorPaymentData }) => ({
+        url: `/investors/${id}/pay`,
+        method: 'POST',
+        body: data,
+      })
+    }),
+
     // ==================== Statistics & Reports ====================
     getInvestorStatistics: builder.query<InvestorStatistics, void>({
       query: () => ({
@@ -110,143 +116,6 @@ export const investorsApi = baseApi.injectEndpoints({
       }),
       providesTags: [{ type: 'Investor', id: 'EQUITY' }],
     }),
-
-    // ==================== Payment Management ====================
-    // Get due summary for specific investor or all investors
-    getInvestorDueSummary: builder.query<InvestorDueSummary[], string | void>({
-      query: (investorId?: string) => ({
-        url: '/investor-payments/due-summary',
-        method: 'GET',
-        params: investorId ? { investorId } : {},
-      }),
-      providesTags: (result, error, investorId) => [
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        ...(investorId ? [{ type: 'Investor', id: investorId }] : []),
-      ],
-    }),
-
-    // Get due payables for a specific investor
-    getDuePayables: builder.query<InvestorPayable[], string>({
-      query: (investorId: string) => ({
-        url: `/investors/${investorId}/due-payables`,
-        method: 'GET',
-      }),
-      providesTags: (result, error, investorId) => [
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-        { type: 'Investor', id: investorId },
-      ],
-    }),
-
-    // Get payment history for an investor
-    getPaymentHistory: builder.query<PaymentHistoryResponse, { investorId: string; params?: PaymentHistoryParams }>({
-      query: ({ investorId, params }: { investorId: string; params?: PaymentHistoryParams }) => ({
-        url: `/investors/${investorId}/payment-history`,
-        method: 'GET',
-        params,
-      }),
-      providesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: 'PAYMENT_HISTORY' },
-        { type: 'Investor', id: investorId },
-      ],
-    }),
-
-    // Make payment to investor
-    createInvestorPayment: builder.mutation<InvestorPayment, { investorId: string; paymentData: CreateInvestorPaymentData }>({
-      query: ({ investorId, paymentData }: { investorId: string; paymentData: CreateInvestorPaymentData }) => ({
-        url: `/investors/${investorId}/payments`,
-        method: 'POST',
-        body: paymentData,
-      }),
-      invalidatesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: investorId },
-        { type: 'Investor', id: 'LIST' },
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-        { type: 'Investor', id: 'PAYMENT_HISTORY' },
-        { type: 'Investor', id: 'STATS' },
-        { type: 'Investor', id: 'PERFORMANCE' },
-      ],
-    }),
-
-    // Create payable for investor (internal use - when profit is calculated)
-    createPayable: builder.mutation<InvestorPayable, { investorId: string; payableData: CreatePayableData }>({
-      query: ({ investorId, payableData }: { investorId: string; payableData: CreatePayableData }) => ({
-        url: `/investor-payments/${investorId}/payables`,
-        method: 'POST',
-        body: payableData,
-      }),
-      invalidatesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: investorId },
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-        { type: 'Investor', id: 'STATS' },
-      ],
-    }),
-
-    // ==================== Alternative Payment Controller Endpoints ====================
-    // These use the separate investor-payments controller if needed
-    makePaymentAlt: builder.mutation<InvestorPayment, { investorId: string; paymentData: CreateInvestorPaymentData }>({
-      query: ({ investorId, paymentData }: { investorId: string; paymentData: CreateInvestorPaymentData }) => ({
-        url: `/investor-payments/${investorId}/payments`,
-        method: 'POST',
-        body: paymentData,
-      }),
-      invalidatesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: investorId },
-        { type: 'Investor', id: 'LIST' },
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-        { type: 'Investor', id: 'PAYMENT_HISTORY' },
-      ],
-    }),
-
-    getDuePayablesAlt: builder.query<InvestorPayable[], string>({
-      query: (investorId: string) => ({
-        url: `/investor-payments/${investorId}/due-payables`,
-        method: 'GET',
-      }),
-      providesTags: (result, error, investorId) => [
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-        { type: 'Investor', id: investorId },
-      ],
-    }),
-
-    getDueSummaryAlt: builder.query<InvestorDueSummary[], string | void>({
-      query: (investorId?: string) => ({
-        url: '/investor-payments/due-summary',
-        method: 'GET',
-        params: investorId ? { investorId } : {},
-      }),
-      providesTags: (result, error, investorId) => [
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        ...(investorId ? [{ type: 'Investor', id: investorId }] : []),
-      ],
-    }),
-
-    getPaymentHistoryAlt: builder.query<PaymentHistoryResponse, { investorId: string; params?: PaymentHistoryParams }>({
-      query: ({ investorId, params }: { investorId: string; params?: PaymentHistoryParams }) => ({
-        url: `/investor-payments/${investorId}/payment-history`,
-        method: 'GET',
-        params,
-      }),
-      providesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: 'PAYMENT_HISTORY' },
-        { type: 'Investor', id: investorId },
-      ],
-    }),
-
-    createPayableAlt: builder.mutation<InvestorPayable, { investorId: string; payableData: CreatePayableData }>({
-      query: ({ investorId, payableData }: { investorId: string; payableData: CreatePayableData }) => ({
-        url: `/investor-payments/${investorId}/payables`,
-        method: 'POST',
-        body: payableData,
-      }),
-      invalidatesTags: (result, error, { investorId }) => [
-        { type: 'Investor', id: investorId },
-        { type: 'Investor', id: 'DUE_SUMMARY' },
-        { type: 'Investor', id: 'DUE_PAYABLES' },
-      ],
-    }),
   }),
 });
 
@@ -259,22 +128,11 @@ export const {
   useDeleteInvestorMutation,
   useToggleInvestorStatusMutation,
 
+  // Enhanced Due Summary & Payments
+  useGetInvestorDueSummaryQuery,
+  usePayInvestorMutation,
   // Statistics & Reports
   useGetInvestorStatisticsQuery,
   useGetInvestorPerformanceQuery,
-  useGetEquityDistributionQuery,
-
-  // Payment Management (Main endpoints)
-  useGetInvestorDueSummaryQuery,
-  useGetDuePayablesQuery,
-  useGetPaymentHistoryQuery,
-  useCreateInvestorPaymentMutation,
-  useCreatePayableMutation,
-
-  // Alternative Payment Controller Endpoints
-  useMakePaymentAltMutation,
-  useGetDuePayablesAltQuery,
-  useGetDueSummaryAltQuery,
-  useGetPaymentHistoryAltQuery,
-  useCreatePayableAltMutation,
+  useGetEquityDistributionQuery
 } = investorsApi;
