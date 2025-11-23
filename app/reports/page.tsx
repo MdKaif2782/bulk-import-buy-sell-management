@@ -1,149 +1,129 @@
 "use client"
 
-import { Sidebar } from "@/components/sidebar"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Download, FileText } from "lucide-react"
-import { useLanguage } from "@/components/language-provider"
+import { Download, BarChart3, PieChart, TrendingUp, Users, Package, CreditCard, FileText } from "lucide-react"
+import { toast } from "sonner"
+
+// Import components
+import { QuickStats } from "@/components/quick-stats"
+import { InventoryReports } from "@/components/inventory-reports"
+import { FinancialReports } from "@/components/financial-reports"
+import { InvestorReports } from "@/components/investor-reports"
+import { SalesReports } from "@/components/sales-reports"
+import { EmployeeReports } from "@/components/employee-reports"
+import { BusinessHealth } from "@/components/business-health"
+import { Sidebar } from "@/components/sidebar"
 
 export default function ReportsPage() {
-  const { t } = useLanguage()
+  const [activeTab, setActiveTab] = useState("overview")
+
+  const handleExport = (type: string) => {
+    toast.info(`Exporting ${type} report...`, {
+      description: "This feature will be available soon"
+    })
+  }
 
   return (
-    <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar />
-
-      <main className="flex-1 overflow-auto w-full">
-        <div className="sticky top-0 z-30 bg-card border-b border-border p-4 md:p-6">
-          <h1 className="text-2xl md:text-4xl font-bold text-foreground">{t("reports")}</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">View and export financial reports</p>
+        <div className="flex min-h-screen bg-background">
+          <Sidebar />
+    <div className="flex-1 space-y-6 p-6 md:p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Business Intelligence</h1>
+          <p className="text-muted-foreground">
+            Comprehensive reports and analytics for your business
+          </p>
         </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => handleExport("comprehensive")}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export Report
+          </Button>
+        </div>
+      </div>
 
-        <div className="p-4 md:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Summary Report</CardTitle>
-                <CardDescription>October 2025</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Total Purchase</span>
-                  <span className="font-semibold">৳ 5,00,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Total Sales</span>
-                  <span className="font-semibold">৳ 6,20,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Printing & Branding</span>
-                  <span className="font-semibold">৳ 8,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Office & Staff</span>
-                  <span className="font-semibold">৳ 12,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Transport & Misc</span>
-                  <span className="font-semibold">৳ 10,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Tax Paid</span>
-                  <span className="font-semibold">৳ 5,000</span>
-                </div>
-                <div className="flex justify-between py-3 bg-primary/10 px-3 rounded font-semibold">
-                  <span>Net Profit</span>
-                  <span>৳ 85,000</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span>Investor Profit (30%)</span>
-                  <span className="font-semibold">৳ 25,500</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span>Business Profit</span>
-                  <span className="font-semibold">৳ 59,500</span>
-                </div>
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-4">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
-                </Button>
-              </CardContent>
-            </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 h-auto">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            <span className="hidden sm:inline">Inventory</span>
+          </TabsTrigger>
+          <TabsTrigger value="financial" className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4" />
+            <span className="hidden sm:inline">Financial</span>
+          </TabsTrigger>
+          <TabsTrigger value="investors" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Investors</span>
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            <span className="hidden sm:inline">Sales</span>
+          </TabsTrigger>
+          <TabsTrigger value="employees" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Employees</span>
+          </TabsTrigger>
+          <TabsTrigger value="health" className="flex items-center gap-2">
+            <PieChart className="w-4 h-4" />
+            <span className="hidden sm:inline">Health</span>
+          </TabsTrigger>
+        </TabsList>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Investor Profit Distribution</CardTitle>
-                <CardDescription>October 2025</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Investor A (30%)</span>
-                  <span className="font-semibold">৳ 25,500</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Investor B (25%)</span>
-                  <span className="font-semibold">৳ 21,250</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Investor C (20%)</span>
-                  <span className="font-semibold">৳ 17,000</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span>Investor D (15%)</span>
-                  <span className="font-semibold">৳ 12,750</span>
-                </div>
-                <div className="flex justify-between py-3 bg-primary/10 px-3 rounded font-semibold">
-                  <span>Total Distributed</span>
-                  <span>৳ 76,500</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span>Business Retained</span>
-                  <span className="font-semibold">৳ 8,500</span>
-                </div>
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-4">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export PDF
-                </Button>
-              </CardContent>
-            </Card>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <QuickStats />
+          
+          <div className="grid gap-6 md:grid-cols-2">
+            <FinancialReports preview />
+            <InventoryReports preview />
+            <InvestorReports preview />
+            <SalesReports preview />
           </div>
+        </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Reports</CardTitle>
-              <CardDescription>Generate and download various business reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { title: "Profit & Loss Statement", desc: "Complete P&L analysis" },
-                  { title: "Tax Summary Report", desc: "Tax calculations and payments" },
-                  { title: "Stock Movement Report", desc: "Inventory changes" },
-                  { title: "Investor Balance Sheet", desc: "Investment and returns" },
-                  { title: "Currency Conversion Report", desc: "Import currency summary" },
-                  { title: "Due Payment Report", desc: "Outstanding payments" },
-                ].map((report, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{report.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{report.desc}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" className="flex-shrink-0 ml-2 bg-transparent">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+        {/* Inventory Tab */}
+        <TabsContent value="inventory" className="space-y-6">
+          <InventoryReports />
+        </TabsContent>
+
+        {/* Financial Tab */}
+        <TabsContent value="financial" className="space-y-6">
+          <FinancialReports />
+        </TabsContent>
+
+        {/* Investors Tab */}
+        <TabsContent value="investors" className="space-y-6">
+          <InvestorReports />
+        </TabsContent>
+
+        {/* Sales Tab */}
+        <TabsContent value="sales" className="space-y-6">
+          <SalesReports />
+        </TabsContent>
+
+        {/* Employees Tab */}
+        <TabsContent value="employees" className="space-y-6">
+          <EmployeeReports />
+        </TabsContent>
+
+        {/* Business Health Tab */}
+        <TabsContent value="health" className="space-y-6">
+          <BusinessHealth />
+        </TabsContent>
+      </Tabs>
+    </div>
     </div>
   )
 }
