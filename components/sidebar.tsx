@@ -20,6 +20,7 @@ import {
   PersonStandingIcon,
   ContactIcon,
   PackageMinus,
+  DoorClosedIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -34,6 +35,7 @@ const navItemsKeys = [
   { href: "/quotations", labelKey: "quotations", icon: FileText },
   { href: "/orders", labelKey: "Orders", icon: ListOrdered },
   { href: "/challan", labelKey: "Challans", icon: TruckIcon },
+  { href: "/gatepass", labelKey: "Gatepass", icon: DoorClosedIcon },
   { href: "/billing", labelKey: "Billing", icon: DollarSign },
    { href: "/salary", labelKey: "Salary", icon: ContactIcon },
   { href: "/expenses", labelKey: "expenses", icon: TrendingUp },
