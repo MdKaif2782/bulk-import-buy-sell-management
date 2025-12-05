@@ -11,9 +11,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Calendar, CreditCard, Building, Wallet, TrendingDown, Loader2, Receipt, Clock, CheckCircle } from 'lucide-react';
-import { 
-  useGetDuePurchaseOrdersQuery, 
-  useAddPaymentMutation 
+import {
+  useGetDuePurchaseOrdersQuery,
+  useAddPaymentMutation
 } from '@/lib/store/api/purchaseOrdersApi';
 
 interface PaymentPayload {
@@ -29,25 +29,25 @@ interface PaymentPayload {
 
 export function PayDueBills() {
   const [selectedOrder, setSelectedOrder] = useState<string>('');
-  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE'>('BANK_TRANSFER');
   const [reference, setReference] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch due purchase orders from API
-  const { 
-    data: dueOrdersResponse, 
-    isLoading: isLoadingOrders, 
+  const {
+    data: dueOrdersResponse,
+    isLoading: isLoadingOrders,
     error: ordersError,
-    refetch: refetchDueOrders 
+    refetch: refetchDueOrders
   } = useGetDuePurchaseOrdersQuery({});
-  
+
   // Add payment mutation
   const [addPayment, { isLoading: isProcessingPayment }] = useAddPaymentMutation();
 
   const dueOrders = useMemo(() => dueOrdersResponse?.data || [], [dueOrdersResponse]);
-  const selectedOrderData = useMemo(() => 
-    dueOrders.find(order => order.id === selectedOrder), 
+  const selectedOrderData = useMemo(() =>
+    dueOrders.find(order => order.id === selectedOrder),
     [dueOrders, selectedOrder]
   );
 
@@ -84,15 +84,15 @@ export function PayDueBills() {
     const loadingToast = toast.loading('Processing payment...');
 
     try {
-  // Prepare payload
-const payload = preparePaymentPayload(selectedOrder, paymentAmount);
-console.log("Payload for due pay: ", payload);
+      // Prepare payload
+      const payload = preparePaymentPayload(selectedOrder, paymentAmount);
+      console.log("Payload for due pay: ", payload);
 
-// MUST call mutation with named keys
-await addPayment({
-  purchaseOrderId: payload.purchaseOrderId,
-  paymentData: payload.paymentData,
-}).unwrap();
+      // MUST call mutation with named keys
+      await addPayment({
+        purchaseOrderId: payload.purchaseOrderId,
+        paymentData: payload.paymentData,
+      }).unwrap();
 
 
       toast.dismiss(loadingToast);
@@ -105,7 +105,7 @@ await addPayment({
       setSelectedOrder('');
       setPaymentAmount(0);
       setReference('');
-      
+
       // 🔧 CRITICAL: Small delay before refetch to ensure DB consistency
       setTimeout(() => {
         refetchDueOrders();
@@ -114,11 +114,11 @@ await addPayment({
     } catch (error: any) {
       toast.dismiss(loadingToast);
       console.error('Payment failed:', error);
-      
-      const errorMessage = error?.data?.message || 
-                          error?.error || 
-                          'Payment processing failed. Please try again.';
-      
+
+      const errorMessage = error?.data?.message ||
+        error?.error ||
+        'Payment processing failed. Please try again.';
+
       toast.error('Failed to record payment', {
         description: errorMessage,
       });
@@ -183,7 +183,7 @@ await addPayment({
     const totalDue = dueOrders.reduce((sum, order) => sum + order.dueAmount, 0);
     const totalPaid = dueOrders.reduce((sum, order) => sum + (order.totalAmount - order.dueAmount), 0);
     const pendingBills = dueOrders.length;
-    
+
     return { totalDue, totalPaid, pendingBills };
   }, [dueOrders]);
 
@@ -210,8 +210,8 @@ await addPayment({
               Please check your connection and try again
             </p>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-4"
             onClick={() => refetchDueOrders()}
             disabled={isLoadingOrders}
@@ -254,17 +254,17 @@ await addPayment({
             </CardContent>
           </Card>
         ) : (
-          <Accordion 
-            type="single" 
-            collapsible 
+          <Accordion
+            type="single"
+            collapsible
             value={selectedOrder}
             onValueChange={setSelectedOrder}
             className="space-y-4"
           >
             {dueOrders.map((order) => (
-              <AccordionItem 
-                key={order.id} 
-                value={order.id} 
+              <AccordionItem
+                key={order.id}
+                value={order.id}
                 className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
               >
                 <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50 rounded-t-lg">
@@ -325,7 +325,7 @@ await addPayment({
                             {order.payments.length} payment{order.payments.length > 1 ? 's' : ''}
                           </Badge>
                         </div>
-                        
+
                         <div className="space-y-3 max-h-60 overflow-y-auto">
                           {order.payments.map((payment) => (
                             <div key={payment.id} className="flex items-center justify-between p-3 bg-white rounded border">
@@ -363,7 +363,7 @@ await addPayment({
                     )}
 
                     {/* Pay Button */}
-                    <Button 
+                    <Button
                       onClick={() => handleOrderSelect(order.id)}
                       className="w-full"
                       variant={selectedOrder === order.id ? "default" : "outline"}
@@ -422,7 +422,23 @@ await addPayment({
                       id="paymentAmount"
                       type="number"
                       value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // Allow empty string during backspace
+                        if (value === "") {
+                          setPaymentAmount("");
+                          return;
+                        }
+
+                        // Prevent leading zeros like 050000
+                        if (/^0\d+/.test(value)) {
+                          setPaymentAmount(value.replace(/^0+/, ""));
+                          return;
+                        }
+
+                        setPaymentAmount(value);
+                      }}
                       min="0"
                       max={selectedOrderData.dueAmount}
                       step="0.01"
@@ -437,8 +453,8 @@ await addPayment({
 
                   <div>
                     <Label htmlFor="paymentMethod" className="mb-2">Payment Method</Label>
-                    <Select 
-                      value={paymentMethod} 
+                    <Select
+                      value={paymentMethod}
                       onValueChange={(value: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE') => setPaymentMethod(value)}
                       disabled={isProcessing}
                     >
@@ -500,11 +516,11 @@ await addPayment({
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   onClick={handlePayment}
                   disabled={
-                    paymentAmount <= 0 || 
+                    paymentAmount <= 0 ||
                     paymentAmount > selectedOrderData.dueAmount ||
                     isProcessing ||
                     isProcessingPayment
@@ -521,12 +537,12 @@ await addPayment({
                   )}
                 </Button>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => {
                     setSelectedOrder('');
-                    setPaymentAmount(0);
+                    setPaymentAmount("");
                     setReference('');
                   }}
                   disabled={isProcessing || isProcessingPayment}
