@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, CreditCard, Building, Wallet, TrendingDown, Loader2, Receipt, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, CreditCard, Building, Wallet, TrendingDown, Loader2, Receipt, Clock, CheckCircle, Download, FileText } from 'lucide-react';
 import {
   useGetDuePurchaseOrdersQuery,
   useAddPaymentMutation
 } from '@/lib/store/api/purchaseOrdersApi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface PaymentPayload {
   purchaseOrderId: string;
@@ -27,9 +29,33 @@ interface PaymentPayload {
   };
 }
 
+interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  vendorName: string;
+  totalAmount: number;
+  dueAmount: number;
+  createdAt: string;
+  payments?: Payment[];
+  vendorDetails?: {
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
+}
+
+interface Payment {
+  id: string;
+  amount: number;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE';
+  reference?: string;
+  notes?: string;
+  paymentDate: string;
+}
+
 export function PayDueBills() {
   const [selectedOrder, setSelectedOrder] = useState<string>('');
-  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE'>('BANK_TRANSFER');
   const [reference, setReference] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +76,165 @@ export function PayDueBills() {
     dueOrders.find(order => order.id === selectedOrder),
     [dueOrders, selectedOrder]
   );
+
+  // Generate PDF for a bill
+  const generateBillPDF = useCallback((order: PurchaseOrder, paymentAmount?: number) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set font - using standard fonts that work in jsPDF
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      // Company Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Genuine Stationers & Gift Corner', 105, 15, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('169/C Kalabagan (Old), 94/1 Green Road (New) Staff Colony', 105, 22, { align: 'center' });
+      doc.text('Kalabagan 2nd Lane, Dhanmondi, Dhaka- 1205', 105, 27, { align: 'center' });
+      doc.text('Phone : +88-02-9114774', 105, 32, { align: 'center' });
+      doc.text('Mobile : +88 01711-560963, +88 01971-560963', 105, 37, { align: 'center' });
+      doc.text('E-mail : gsgcreza@gmail.com, gmsreza87@yahoo.com', 105, 42, { align: 'center' });
+
+      // Separator line
+      doc.setLineWidth(0.5);
+      doc.line(10, 45, 200, 45);
+
+      // Bill Title
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT RECEIPT', 105, 55, { align: 'center' });
+
+      // Bill Information
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      
+      const billInfoY = 65;
+      doc.text(`Receipt No: ${order.poNumber}`, 20, billInfoY);
+      doc.text(`Date: ${formatDateForPDF(order.createdAt)}`, 20, billInfoY + 5);
+      doc.text(`Time: ${new Date().toLocaleTimeString('en-BD', { hour12: false })}`, 20, billInfoY + 10);
+
+      doc.text(`Bill To: ${order.vendorName}`, 120, billInfoY);
+      if (order.vendorDetails?.address) {
+        doc.text(`Address: ${order.vendorDetails.address}`, 120, billInfoY + 5);
+      }
+      if (order.vendorDetails?.phone) {
+        doc.text(`Phone: ${order.vendorDetails.phone}`, 120, billInfoY + 10);
+      }
+
+      // Payment Summary Section
+      const summaryY = billInfoY + 20;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT SUMMARY', 20, summaryY);
+
+      // Payment summary table
+      const tableData = [
+        ['Total Bill Amount', formatNumber(order.totalAmount)],
+        ['Total Paid', formatNumber(order.totalAmount - order.dueAmount)],
+        ['Previous Due', formatNumber(order.dueAmount)]
+      ];
+
+      if (paymentAmount) {
+        tableData.push(['This Payment', formatNumber(paymentAmount)]);
+        tableData.push(['Current Due', formatNumber(order.dueAmount - paymentAmount)]);
+      }
+
+      autoTable(doc, {
+        startY: summaryY + 5,
+        head: [['Description', 'Amount (BDT)']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [241, 241, 241], textColor: 0, fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: {
+          0: { cellWidth: 80, fontStyle: 'bold' },
+          1: { cellWidth: 40, halign: 'right' }
+        },
+        margin: { left: 20, right: 20 }
+      });
+
+      // Payment History Section
+      if (order.payments && order.payments.length > 0) {
+        const lastY = (doc as any).lastAutoTable.finalY + 15;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYMENT HISTORY', 20, lastY);
+
+        const paymentHistoryData = order.payments.map(payment => [
+          formatDateForPDF(payment.paymentDate),
+          getPaymentMethodLabel(payment.paymentMethod),
+          payment.reference || 'N/A',
+          formatNumber(payment.amount)
+        ]);
+
+        autoTable(doc, {
+          startY: lastY + 5,
+          head: [['Date', 'Method', 'Reference', 'Amount (BDT)']],
+          body: paymentHistoryData,
+          theme: 'grid',
+          headStyles: { fillColor: [241, 241, 241], textColor: 0, fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 2 },
+          columnStyles: {
+            3: { halign: 'right' }
+          },
+          margin: { left: 20, right: 20 }
+        });
+      }
+
+      // Footer
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('This is a computer generated receipt. No signature required.', 105, pageHeight - 20, { align: 'center' });
+      doc.text('Thank you for your business!', 105, pageHeight - 15, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleString('en-BD')}`, 105, pageHeight - 10, { align: 'center' });
+
+      // Save PDF
+      doc.save(`Bill_Receipt_${order.poNumber}_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      toast.success('Bill downloaded successfully!', {
+        icon: <Download className="w-5 h-5 text-green-500" />,
+        description: `Receipt for ${order.vendorName}`
+      });
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF', {
+        description: 'Please try again or contact support'
+      });
+    }
+  }, []);
+
+  // Helper function to format date for PDF
+  const formatDateForPDF = useCallback((dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-BD', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }, []);
+
+  // Helper function to format numbers without currency symbol
+  const formatNumber = useCallback((amount: number) => {
+    return new Intl.NumberFormat('en-BD', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  }, []);
+
+  // Generate PDF after payment
+  const generatePaymentReceipt = useCallback((order: PurchaseOrder, paymentAmount: number) => {
+    generateBillPDF(order, paymentAmount);
+  }, [generateBillPDF]);
 
   // 🔧 CRITICAL FIX: Minimal, serializable payload
   const preparePaymentPayload = useCallback((orderId: string, amount: number): PaymentPayload => {
@@ -94,11 +279,19 @@ export function PayDueBills() {
         paymentData: payload.paymentData,
       }).unwrap();
 
-
       toast.dismiss(loadingToast);
+      
+      // Generate receipt immediately after successful payment
+      generatePaymentReceipt(selectedOrderData, paymentAmount);
+      
       toast.success('Payment recorded successfully!', {
         icon: <CheckCircle className="w-5 h-5 text-green-500" />,
         description: `Paid ${formatCurrency(paymentAmount)} to ${selectedOrderData.vendorName}`,
+        action: {
+          label: 'Download Receipt',
+          onClick: () => generateBillPDF(selectedOrderData, paymentAmount)
+        },
+        duration: 10000
       });
 
       // Reset form
@@ -125,7 +318,7 @@ export function PayDueBills() {
     } finally {
       setIsProcessing(false);
     }
-  }, [selectedOrderData, paymentAmount, selectedOrder, preparePaymentPayload, addPayment, refetchDueOrders]);
+  }, [selectedOrderData, paymentAmount, selectedOrder, preparePaymentPayload, addPayment, refetchDueOrders, generatePaymentReceipt, generateBillPDF]);
 
   // 🔧 CRITICAL FIX: Use useCallback for stable event handlers
   const handleOrderSelect = useCallback((orderId: string) => {
@@ -278,6 +471,18 @@ export function PayDueBills() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateBillPDF(order);
+                        }}
+                        className="h-8 px-2"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Download Bill
+                      </Button>
                       <Badge variant={order.dueAmount > 0 ? "destructive" : "default"}>
                         Due: {formatCurrency(order.dueAmount)}
                       </Badge>
@@ -318,12 +523,25 @@ export function PayDueBills() {
                     {/* Payment History */}
                     {order.payments && order.payments.length > 0 && (
                       <div className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Receipt className="w-4 h-4" />
-                          <h4 className="font-medium text-sm">Payment History</h4>
-                          <Badge variant="secondary" className="ml-auto">
-                            {order.payments.length} payment{order.payments.length > 1 ? 's' : ''}
-                          </Badge>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Receipt className="w-4 h-4" />
+                            <h4 className="font-medium text-sm">Payment History</h4>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">
+                              {order.payments.length} payment{order.payments.length > 1 ? 's' : ''}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => generateBillPDF(order)}
+                              className="h-8 px-2"
+                            >
+                              <Download className="w-3 h-3 mr-2" />
+                              Full Receipt
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -362,15 +580,26 @@ export function PayDueBills() {
                       </div>
                     )}
 
-                    {/* Pay Button */}
-                    <Button
-                      onClick={() => handleOrderSelect(order.id)}
-                      className="w-full"
-                      variant={selectedOrder === order.id ? "default" : "outline"}
-                      size="lg"
-                    >
-                      {selectedOrder === order.id ? 'Selected for Payment' : 'Pay This Bill'}
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleOrderSelect(order.id)}
+                        className="flex-1"
+                        variant={selectedOrder === order.id ? "default" : "outline"}
+                        size="lg"
+                      >
+                        {selectedOrder === order.id ? 'Selected for Payment' : 'Pay This Bill'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => generateBillPDF(order)}
+                        className="px-4"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Bill PDF
+                      </Button>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -424,20 +653,14 @@ export function PayDueBills() {
                       value={paymentAmount}
                       onChange={(e) => {
                         const value = e.target.value;
-
-                        // Allow empty string during backspace
                         if (value === "") {
-                          setPaymentAmount("");
+                          setPaymentAmount(0);
                           return;
                         }
-
-                        // Prevent leading zeros like 050000
-                        if (/^0\d+/.test(value)) {
-                          setPaymentAmount(value.replace(/^0+/, ""));
-                          return;
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                          setPaymentAmount(numValue);
                         }
-
-                        setPaymentAmount(value);
                       }}
                       min="0"
                       max={selectedOrderData.dueAmount}
@@ -533,22 +756,32 @@ export function PayDueBills() {
                       Processing...
                     </>
                   ) : (
-                    'Record Payment'
+                    'Record Payment & Download Receipt'
                   )}
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSelectedOrder('');
-                    setPaymentAmount("");
-                    setReference('');
-                  }}
-                  disabled={isProcessing || isProcessingPayment}
-                >
-                  Select Different Bill
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedOrder('');
+                      setPaymentAmount(0);
+                      setReference('');
+                    }}
+                    disabled={isProcessing || isProcessingPayment}
+                  >
+                    Select Different Bill
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => generateBillPDF(selectedOrderData)}
+                    disabled={isProcessing || isProcessingPayment}
+                    className="px-4"
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="text-center text-muted-foreground py-12">
