@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreatePurchaseOrderData, PaymentType, CreatePurchaseOrderItem, CreatePurchaseOrderInvestment } from '@/types/purchaseOrder';
 import { toast } from 'sonner';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2, Phone } from 'lucide-react';
 import { Investor } from '@/types/investor';
 
 const COUNTRIES = [
@@ -37,7 +37,8 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
     name: '',
     country: '',
     address: '',
-    contact: '',
+    contact: '', // Contact person name
+    contactNo: '', // Contact phone number
   });
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [products, setProducts] = useState<CreatePurchaseOrderItem[]>([
@@ -115,13 +116,20 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
 
   const handleSubmit = () => {
     // Validation
-    if (!vendor.name || !vendor.country || !vendor.contact) {
+    if (!vendor.name || !vendor.country || !vendor.contact || !vendor.contactNo) {
       toast.error('Please fill in all required vendor fields');
       return;
     }
 
     if (products.some(p => !p.productName || p.quantity <= 0 || p.unitPrice <= 0)) {
       toast.error('Please fill all product details correctly');
+      return;
+    }
+
+    // Validate contact number format (basic validation)
+    const phoneRegex = /^[0-9\-\+\s\(\)]{10,15}$/;
+    if (!phoneRegex.test(vendor.contactNo.replace(/\s/g, ''))) {
+      toast.error('Please enter a valid contact number');
       return;
     }
 
@@ -137,7 +145,8 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
       vendorName: vendor.name,
       vendorCountry: vendor.country,
       vendorAddress: vendor.address,
-      vendorContact: vendor.contact,
+      vendorContact: vendor.contact, // Contact person name
+      vendorContactNo: vendor.contactNo, // Contact phone number
       paymentType,
       totalAmount,
       taxAmount,
@@ -208,12 +217,28 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
               <Label htmlFor="vendorContact">Contact Person *</Label>
               <Input 
                 id="vendorContact" 
-                placeholder="Contact name" 
+                placeholder="Contact person name" 
                 value={vendor.contact}
                 onChange={(e) => setVendor(prev => ({ ...prev, contact: e.target.value }))}
               />
             </div>
             <div>
+              <Label htmlFor="vendorContactNo">Contact Number *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="vendorContactNo" 
+                  placeholder="+880 1234 567890"
+                  className="pl-10"
+                  value={vendor.contactNo}
+                  onChange={(e) => setVendor(prev => ({ ...prev, contactNo: e.target.value }))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Format: +880 1234 567890 or 01234567890
+              </p>
+            </div>
+            <div className="md:col-span-2">
               <Label htmlFor="vendorAddress">Address</Label>
               <Input 
                 id="vendorAddress" 
@@ -262,18 +287,7 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
                     step="0.01"
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label>Tax (%)</Label>
-                  <Input
-                    type="number"
-                    value={product.taxPercentage}
-                    onChange={(e) => updateProduct(index, 'taxPercentage', Number(e.target.value))}
-                    min="0"
-                    max="100"
-                    step="0.1"
-                  />
-                </div>
-                <div className="col-span-1">
+                <div className="col-span-3">
                   <Label>Total</Label>
                   <div className="text-sm font-medium p-2 bg-muted rounded">
                     {formatCurrency(calculateProductTotal(product))}
@@ -523,7 +537,7 @@ export function CreatePurchaseOrder({ onSuccess, investors, isLoading = false }:
             className="w-full mt-6" 
             size="lg"
             onClick={handleSubmit}
-            disabled={isLoading || !vendor.name || !vendor.country || !vendor.contact || products.some(p => !p.productName || p.quantity <= 0 || p.unitPrice <= 0)}
+            disabled={isLoading || !vendor.name || !vendor.country || !vendor.contact || !vendor.contactNo || products.some(p => !p.productName || p.quantity <= 0 || p.unitPrice <= 0)}
           >
             {isLoading ? (
               <>
