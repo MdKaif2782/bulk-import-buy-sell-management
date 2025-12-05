@@ -43,6 +43,7 @@ export interface PurchaseOrder {
   vendorCountry: string;
   vendorAddress: string;
   vendorContact: string;
+  vendorContactNo?: string;
   paymentType: PaymentType;
   status: POStatus;
   totalAmount: number;
@@ -83,6 +84,7 @@ export interface CreatePurchaseOrderData {
   vendorName: string;
   vendorCountry: string;
   vendorAddress: string;
+  vendorContactNo: string
   vendorContact: string;
   paymentType: PaymentType;
   totalAmount: number;

@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { POStatus, PurchaseOrder } from '@/types/purchaseOrder';
-import { Package, CheckCircle, Clock, Eye, Building, Calendar, Loader2 } from 'lucide-react';
+import { POStatus, PurchaseOrder, PaymentType } from '@/types/purchaseOrder';
+import { Package, CheckCircle, Clock, Eye, Building, Calendar, Loader2, Download, FileText } from 'lucide-react';
 import { useMarkAsReceivedMutation } from '@/lib/store/api/purchaseOrdersApi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
@@ -33,6 +35,227 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
   const handleViewOrder = (order: PurchaseOrder) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
+  };
+
+  // Generate Purchase Order PDF
+  const generatePurchaseOrderPDF = (order: PurchaseOrder) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set font
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      // Company Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Genuine Stationers & Gift Corner', 105, 15, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('169/C Kalabagan (Old), 94/1 Green Road (New) Staff Colony', 105, 22, { align: 'center' });
+      doc.text('Kalabagan 2nd Lane, Dhanmondi, Dhaka- 1205', 105, 27, { align: 'center' });
+      doc.text('Phone : +88-02-9114774', 105, 32, { align: 'center' });
+      doc.text('Mobile : +88 01711-560963, +88 01971-560963', 105, 37, { align: 'center' });
+      doc.text('E-mail : gsgcreza@gmail.com, gmsreza87@yahoo.com', 105, 42, { align: 'center' });
+
+      // Separator line
+      doc.setLineWidth(0.5);
+      doc.line(10, 45, 200, 45);
+
+      // Purchase Order Title
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PURCHASE ORDER', 105, 55, { align: 'center' });
+
+      // Order Information
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      
+      const orderInfoY = 65;
+      doc.text(`PO Number: ${order.poNumber}`, 20, orderInfoY);
+      doc.text(`Order Date: ${formatDateForPDF(order.createdAt)}`, 20, orderInfoY + 5);
+      doc.text(`Status: ${order.status}`, 20, orderInfoY + 10);
+      doc.text(`Payment Type: ${order.paymentType}`, 20, orderInfoY + 15);
+
+      doc.text(`Created By: ${order.user.name}`, 120, orderInfoY);
+      doc.text(`Created By Email: ${order.user.email}`, 120, orderInfoY + 5);
+      
+      if (order.receivedAt) {
+        doc.text(`Received Date: ${formatDateForPDF(order.receivedAt)}`, 120, orderInfoY + 10);
+      }
+
+      // Vendor Information Section
+      const vendorY = orderInfoY + 25;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BILL TO:', 20, vendorY);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${order.vendorName}`, 20, vendorY + 7);
+      doc.text(`${order.vendorContact}`, 20, vendorY + 12);
+      
+      if (order.vendorContactNo) {
+        doc.text(`Phone: ${order.vendorContactNo}`, 20, vendorY + 17);
+      }
+      
+      doc.text(`${order.vendorCountry}`, 20, vendorY + 22);
+      
+      if (order.vendorAddress) {
+        const addressLines = doc.splitTextToSize(order.vendorAddress, 80);
+        addressLines.forEach((line: string, index: number) => {
+          doc.text(line, 20, vendorY + 27 + (index * 5));
+        });
+      }
+
+      // Order Items Table
+      const tableStartY = vendorY + 35;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ORDER ITEMS', 20, tableStartY);
+
+      const tableData = order.items.map(item => [
+        item.productName,
+        item.description || '',
+        item.quantity.toString(),
+        formatNumber(item.unitPrice),
+        `${item.taxPercentage}%`,
+        formatNumber(item.totalPrice)
+      ]);
+
+      autoTable(doc, {
+        startY: tableStartY + 5,
+        head: [['Product', 'Description', 'Qty', 'Unit Price (BDT)', 'Tax %', 'Total (BDT)']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [241, 241, 241], textColor: 0, fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 15, halign: 'center' },
+          3: { cellWidth: 25, halign: 'right' },
+          4: { cellWidth: 15, halign: 'center' },
+          5: { cellWidth: 25, halign: 'right' }
+        },
+        margin: { left: 20, right: 20 }
+      });
+
+      // Investments Section (if any)
+      if (order.investments && order.investments.length > 0) {
+        const lastY = (doc as any).lastAutoTable.finalY + 15;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INVESTMENT DETAILS', 20, lastY);
+
+        const investmentData = order.investments.map(investment => [
+          investment.investor.name,
+          investment.investor.email,
+          formatNumber(investment.investmentAmount),
+          `${investment.profitPercentage}%`,
+        ]);
+
+        autoTable(doc, {
+          startY: lastY + 5,
+          head: [['Investor', 'Email', 'Amount (BDT)', 'Profit %']],
+          body: investmentData,
+          theme: 'grid',
+          headStyles: { fillColor: [241, 241, 241], textColor: 0, fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 3 },
+          columnStyles: {
+            2: { halign: 'right' },
+            3: { halign: 'center' },
+          },
+          margin: { left: 20, right: 20 }
+        });
+      }
+
+      // Order Summary
+      const summaryY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ORDER SUMMARY', 20, summaryY);
+
+      const summaryData = [
+        ['Subtotal', formatNumber(order.totalAmount - order.taxAmount)],
+        ['Tax Amount', formatNumber(order.taxAmount)],
+        ['Total Amount', formatNumber(order.totalAmount)]
+      ];
+
+      if (order.paymentType === PaymentType.DUE) {
+        const paidAmount = order.totalAmount - order.dueAmount;
+        summaryData.push(
+          ['Amount Paid', formatNumber(paidAmount)],
+          ['Due Amount', formatNumber(order.dueAmount)]
+        );
+      }
+
+      autoTable(doc, {
+        startY: summaryY + 5,
+        body: summaryData,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: {
+          0: { cellWidth: 80, fontStyle: 'bold' },
+          1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: 20, right: 20 }
+      });
+
+      // Notes Section (if any)
+      if (order.notes) {
+        const lastY = (doc as any).lastAutoTable.finalY + 15;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('NOTES', 20, lastY);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const noteLines = doc.splitTextToSize(order.notes, 170);
+        noteLines.forEach((line: string, index: number) => {
+          doc.text(line, 20, lastY + 10 + (index * 5));
+        });
+      }
+
+      // Footer
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('This is a computer generated purchase order. No signature required.', 105, pageHeight - 20, { align: 'center' });
+      doc.text('Thank you for your business!', 105, pageHeight - 15, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleString('en-BD')}`, 105, pageHeight - 10, { align: 'center' });
+
+      // Save PDF
+      doc.save(`Purchase_Order_${order.poNumber}_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
+  // Helper function to format date for PDF
+  const formatDateForPDF = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-BD', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Helper function to format numbers without currency symbol
+  const formatNumber = (amount: number) => {
+    return new Intl.NumberFormat('en-BD', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
   };
 
   const handleConfirmReceive = async () => {
@@ -187,13 +410,21 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                         View
                       </Button>
                       <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => generatePurchaseOrderPDF(order)}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        PDF
+                      </Button>
+                      <Button
                         variant="default"
                         size="sm"
                         onClick={() => handleMarkReceived(order)}
                         disabled={order.status === POStatus.RECEIVED || order.status === POStatus.CANCELLED}
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        Mark Received
+                        Received
                       </Button>
                     </div>
                   </TableCell>
@@ -216,7 +447,20 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="!max-w-[70vw]">
           <DialogHeader>
-            <DialogTitle>Purchase Order Details</DialogTitle>
+            <DialogTitle className="flex justify-between items-center">
+              <span>Purchase Order Details</span>
+              {selectedOrder && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generatePurchaseOrderPDF(selectedOrder)}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </Button>
+              )}
+            </DialogTitle>
           </DialogHeader>
           
           {selectedOrder && (
@@ -243,6 +487,12 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                       <span className="text-sm">Payment Type:</span>
                       <span>{selectedOrder.paymentType}</span>
                     </div>
+                    {selectedOrder.receivedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-sm">Received Date:</span>
+                        <span>{formatDate(selectedOrder.receivedAt)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -251,14 +501,24 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                   <div className="p-3 bg-muted rounded-lg space-y-2">
                     <div className="font-medium">{selectedOrder.vendorName}</div>
                     <div className="text-sm">{selectedOrder.vendorContact}</div>
+                    {selectedOrder.vendorContactNo && (
+                      <div className="text-sm">Phone: {selectedOrder.vendorContactNo}</div>
+                    )}
                     <div className="text-sm text-muted-foreground">{selectedOrder.vendorCountry}</div>
-                    <div className="text-sm text-muted-foreground">{selectedOrder.vendorAddress}</div>
+                    {selectedOrder.vendorAddress && (
+                      <div className="text-sm text-muted-foreground">{selectedOrder.vendorAddress}</div>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Products</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-sm font-medium">Products</Label>
+                  <span className="text-sm text-muted-foreground">
+                    Total Items: {selectedOrder.items.length}
+                  </span>
+                </div>
                 <div className="mt-2 space-y-2">
                   {selectedOrder.items.map((item) => (
                     <div key={item.id} className="flex justify-between items-center p-3 border rounded-lg">
@@ -269,8 +529,13 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                           {item.description && ` - ${item.description}`}
                         </div>
                       </div>
-                      <div className="font-semibold">
-                        {formatCurrency(item.totalPrice)}
+                      <div className="text-right">
+                        <div className="font-semibold">
+                          {formatCurrency(item.totalPrice)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Tax: {item.taxPercentage}%
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -286,7 +551,7 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                         <div>
                           <div className="font-medium">{investment.investor.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            Profit Share: {investment.profitPercentage}%
+                            Email: {investment.investor.email}
                           </div>
                         </div>
                         <div className="text-right">
@@ -294,7 +559,8 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                             {formatCurrency(investment.investmentAmount)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {investment.isFullInvestment ? 'Full Investment' : 'Partial Investment'}
+                            Profit: {investment.profitPercentage}%
+                            {investment.isFullInvestment && ' • Full Investment'}
                           </div>
                         </div>
                       </div>
@@ -316,22 +582,47 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                     </div>
                   )}
                   <div className="flex justify-between font-bold border-t pt-2">
-                    <span>Total:</span>
+                    <span>Total Amount:</span>
                     <span>{formatCurrency(selectedOrder.totalAmount)}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Payment Type:</span>
+                    <span className="font-medium">{selectedOrder.paymentType}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span>Amount Paid:</span>
                     <span className="text-green-600">
                       {formatCurrency(selectedOrder.totalAmount - selectedOrder.dueAmount)}
                     </span>
                   </div>
-                  <div className="flex justify-between font-bold text-destructive border-t pt-2">
-                    <span>Amount Due:</span>
-                    <span>{formatCurrency(selectedOrder.dueAmount)}</span>
+                  {selectedOrder.paymentType === PaymentType.DUE && (
+                    <div className="flex justify-between font-bold text-destructive border-t pt-2">
+                      <span>Amount Due:</span>
+                      <span>{formatCurrency(selectedOrder.dueAmount)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedOrder.notes && (
+                <div>
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <div className="p-3 bg-muted rounded-lg mt-2">
+                    <div className="text-sm whitespace-pre-wrap">{selectedOrder.notes}</div>
                   </div>
                 </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => generatePurchaseOrderPDF(selectedOrder)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download as PDF
+                </Button>
               </div>
             </div>
           )}
