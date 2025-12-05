@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { X } from 'lucide-react';
 import { POStatus, PurchaseOrder, PaymentType } from '@/types/purchaseOrder';
-import { Package, CheckCircle, Clock, Eye, Building, Calendar, Loader2, Download, FileText } from 'lucide-react';
+import { Package, CheckCircle, Clock, Eye, Building, Calendar, Loader2, Download, FileText, Image as ImageIcon } from 'lucide-react';
 import { useMarkAsReceivedMutation } from '@/lib/store/api/purchaseOrdersApi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -20,12 +21,38 @@ interface PurchaseOrderListProps {
   isLoading?: boolean;
 }
 
+// Interface for received items with imageUrl
+interface ReceivedItemWithImage {
+  purchaseOrderItemId: string;
+  receivedQuantity: number;
+  expectedSalePrice: number;
+  imageUrl: string;
+}
+
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = 'du4spzaiq';
+const CLOUDINARY_UPLOAD_PRESET = 'gift_corner'; // You need to create this in Cloudinary
+
 export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = false }: PurchaseOrderListProps) {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [receivedItems, setReceivedItems] = useState<ReceivedItemWithImage[]>([]);
   
   const [markAsReceived, { isLoading: isMarkingReceived }] = useMarkAsReceivedMutation();
+
+  // Initialize received items when dialog opens
+  useEffect(() => {
+    if (selectedOrder && isReceiveDialogOpen) {
+      const initialItems = selectedOrder.items.map(item => ({
+        purchaseOrderItemId: item.id,
+        receivedQuantity: item.quantity,
+        expectedSalePrice: item.unitPrice * 1.2,
+        imageUrl: ''
+      }));
+      setReceivedItems(initialItems);
+    }
+  }, [selectedOrder, isReceiveDialogOpen]);
 
   const handleMarkReceived = (order: PurchaseOrder) => {
     setSelectedOrder(order);
@@ -35,6 +62,85 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
   const handleViewOrder = (order: PurchaseOrder) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
+  };
+
+  // Handle number input with string conversion
+  const handleNumberInput = (
+    index: number,
+    field: 'receivedQuantity' | 'expectedSalePrice',
+    value: string
+  ) => {
+    // Remove any non-numeric characters except decimal point
+    const numericValue = value.replace(/[^0-9.]/g, '');
+    
+    // Allow empty string for backspace
+    if (numericValue === '') {
+      updateReceivedItem(index, field, 0);
+      return;
+    }
+
+    // Prevent multiple decimal points
+    if ((numericValue.match(/\./g) || []).length > 1) {
+      return;
+    }
+
+    // Convert to number
+    const numValue = parseFloat(numericValue);
+    if (!isNaN(numValue)) {
+      updateReceivedItem(index, field, numValue);
+    }
+  };
+
+  const updateReceivedItem = (
+    index: number,
+    field: keyof ReceivedItemWithImage,
+    value: number | string
+  ) => {
+    const updatedItems = [...receivedItems];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
+    setReceivedItems(updatedItems);
+  };
+
+  // Upload image to Cloudinary
+  const uploadImageToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Image upload failed');
+      }
+
+      const data = await response.json();
+      return data.secure_url;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = async (index: number, file: File) => {
+    try {
+      const imageUrl = await uploadImageToCloudinary(file);
+      updateReceivedItem(index, 'imageUrl', imageUrl);
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      alert('Failed to upload image. Please try again.');
+    }
   };
 
   // Generate Purchase Order PDF
@@ -262,20 +368,24 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
     if (!selectedOrder) return;
 
     try {
-      // Create received items data - in a real app, you'd get this from form inputs
-      const receivedItems = selectedOrder.items.map(item => ({
-        purchaseOrderItemId: item.id,
-        receivedQuantity: item.quantity, // Default to full quantity
-        expectedSalePrice: item.unitPrice * 1.2, // Default 20% markup
-      }));
+      // Prepare the data for the API call
+      const markAsReceivedData = {
+        receivedItems: receivedItems.map(item => ({
+          purchaseOrderItemId: item.purchaseOrderItemId,
+          receivedQuantity: item.receivedQuantity,
+          expectedSalePrice: item.expectedSalePrice,
+          imageUrl: item.imageUrl
+        }))
+      };
 
       await markAsReceived({
         id: selectedOrder.id,
-        data: { receivedItems }
+        data: markAsReceivedData
       }).unwrap();
       
       setIsReceiveDialogOpen(false);
       setSelectedOrder(null);
+      setReceivedItems([]);
     } catch (error) {
       console.error('Failed to mark as received:', error);
     }
@@ -443,28 +553,22 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
         </CardContent>
       </Card>
 
-      {/* View Order Dialog */}
+      {/* View Order Dialog - Prevent closing on outside click */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="!max-w-[70vw]">
+        <DialogContent className="!max-w-[70vw] fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <DialogHeader>
-            <DialogTitle className="flex justify-between items-center">
-              <span>Purchase Order Details</span>
-              {selectedOrder && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generatePurchaseOrderPDF(selectedOrder)}
-                  className="gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download PDF
+            <div className="flex justify-between items-center">
+              <DialogTitle>Purchase Order Details</DialogTitle>
+              <DialogClose asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
-            </DialogTitle>
+              </DialogClose>
+            </div>
           </DialogHeader>
           
           {selectedOrder && (
-            <div className="space-y-6">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Order Information</Label>
@@ -615,9 +719,15 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                 </div>
               )}
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button
                   variant="outline"
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  variant="default"
                   onClick={() => generatePurchaseOrderPDF(selectedOrder)}
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -629,18 +739,25 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
         </DialogContent>
       </Dialog>
 
-      {/* Mark Received Dialog */}
+      {/* Mark Received Dialog - Prevent closing on outside click */}
       <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
-        <DialogContent className="!max-w-[70vw]">
+        <DialogContent className="!max-w-[90vw] fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              Confirm Product Receipt
-            </DialogTitle>
+            <div className="flex justify-between items-center">
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Confirm Product Receipt
+              </DialogTitle>
+              <DialogClose asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogClose>
+            </div>
           </DialogHeader>
           
           {selectedOrder && (
-            <div className="space-y-6">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">PO Number:</span>
@@ -655,48 +772,73 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
               <div>
                 <h4 className="font-medium mb-3">Received Products</h4>
                 <div className="space-y-3">
-                  {selectedOrder.items.map((item, index) => (
-                    <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 border rounded-lg">
-                      <div>
-                        <Label>Product Name</Label>
-                        <Input value={item.productName} disabled />
-                      </div>
-                      <div>
-                        <Label>Quantity Received</Label>
-                        <Input 
-                          type="number" 
-                          defaultValue={item.quantity}
-                          min="0"
-                          max={item.quantity}
-                          disabled
-                        />
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Ordered: {item.quantity}
+                  {receivedItems.map((receivedItem, index) => {
+                    const orderItem = selectedOrder.items.find(item => item.id === receivedItem.purchaseOrderItemId);
+                    if (!orderItem) return null;
+
+                    return (
+                      <div key={orderItem.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-3 border rounded-lg">
+                        <div>
+                          <Label>Product Name</Label>
+                          <Input value={orderItem.productName} disabled />
+                        </div>
+                        <div>
+                          <Label>Quantity Received</Label>
+                          <Input 
+                            type="text" 
+                            value={receivedItem.receivedQuantity.toString()}
+                            onChange={(e) => handleNumberInput(index, 'receivedQuantity', e.target.value)}
+                            placeholder="Enter quantity"
+                          />
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Ordered: {orderItem.quantity}
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Unit Cost (BDT)</Label>
+                          <Input value={orderItem.unitPrice} disabled />
+                        </div>
+                        <div>
+                          <Label>Sale Price (BDT)</Label>
+                          <Input 
+                            type="text"
+                            value={receivedItem.expectedSalePrice.toString()}
+                            onChange={(e) => handleNumberInput(index, 'expectedSalePrice', e.target.value)}
+                            placeholder="Enter sale price"
+                          />
+                        </div>
+                        <div>
+                          <Label>Product Image</Label>
+                          <div className="space-y-2">
+                            <Input 
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleImageUpload(index, file);
+                                }
+                              }}
+                              className="cursor-pointer"
+                            />
+                            {receivedItem.imageUrl && (
+                              <div className="flex items-center gap-2 text-xs text-green-600">
+                                <ImageIcon className="w-3 h-3" />
+                                Image uploaded
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Total Value</Label>
+                          <Input 
+                            value={formatCurrency(orderItem.totalPrice)}
+                            disabled
+                          />
                         </div>
                       </div>
-                      <div>
-                        <Label>Unit Cost (BDT)</Label>
-                        <Input value={item.unitPrice} disabled />
-                      </div>
-                      <div>
-                        <Label>Sale Price (BDT)</Label>
-                        <Input 
-                          type="number"
-                          defaultValue={item.unitPrice * 1.2}
-                          min="0"
-                          step="0.01"
-                          disabled
-                        />
-                      </div>
-                      <div>
-                        <Label>Total Value</Label>
-                        <Input 
-                          value={formatCurrency(item.totalPrice)}
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -710,15 +852,19 @@ export function PurchaseOrderList({ purchaseOrders, onUpdateStatus, isLoading = 
                       <li>Add all products to inventory with the specified sale prices</li>
                       <li>Generate product codes and barcodes for inventory tracking</li>
                       <li>Make products available for quotations and sales</li>
+                      <li>Uploaded images will be attached to inventory items</li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => setIsReceiveDialogOpen(false)}
+                  onClick={() => {
+                    setIsReceiveDialogOpen(false);
+                    setReceivedItems([]);
+                  }}
                 >
                   Cancel
                 </Button>
