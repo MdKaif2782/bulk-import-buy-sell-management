@@ -115,10 +115,6 @@ export const purchaseOrdersApi = baseApi.injectEndpoints({
         method: 'POST',
         body: paymentData,
       }),
-      invalidatesTags: (_result, _error, { purchaseOrderId }) => [
-        { type: 'PurchaseOrder', id: purchaseOrderId },
-        'PurchaseOrder',
-      ],
     }),
 
     getPaymentSummary: builder.query<PaymentSummaryDto, string>({

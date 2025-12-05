@@ -86,6 +86,7 @@ export function PayDueBills() {
     try {
       // Prepare minimal, flattened payload
       const payload = preparePaymentPayload(selectedOrder, paymentAmount);
+      console.log("Payload for due pay: ",payload)
       
       // 🔧 CRITICAL: Await the mutation directly
       await addPayment(payload).unwrap();
