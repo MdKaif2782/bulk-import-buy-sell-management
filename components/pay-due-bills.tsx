@@ -84,12 +84,16 @@ export function PayDueBills() {
     const loadingToast = toast.loading('Processing payment...');
 
     try {
-      // Prepare minimal, flattened payload
-      const payload = preparePaymentPayload(selectedOrder, paymentAmount);
-      console.log("Payload for due pay: ",payload)
-      
-      // 🔧 CRITICAL: Await the mutation directly
-      await addPayment(payload).unwrap();
+  // Prepare payload
+const payload = preparePaymentPayload(selectedOrder, paymentAmount);
+console.log("Payload for due pay: ", payload);
+
+// MUST call mutation with named keys
+await addPayment({
+  purchaseOrderId: payload.purchaseOrderId,
+  paymentData: payload.paymentData,
+}).unwrap();
+
 
       toast.dismiss(loadingToast);
       toast.success('Payment recorded successfully!', {
