@@ -1,16 +1,19 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/components/language-provider"
 import { Toaster } from "@/components/ui/sonner"
-import { Provider } from "react-redux"
 import StoreProvider from "./providers/StoreProvider"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+import { Poppins } from "next/font/google"
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+})
 
 export const metadata: Metadata = {
   title: "Retail Import Management System",
@@ -25,17 +28,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased`}>
         <StoreProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Toaster
-            position="top-right"
-            expand={false}
-            richColors
-            closeButton
-          />
-          <LanguageProvider>{children}</LanguageProvider>
-        </ThemeProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <Toaster
+              position="top-right"
+              expand={false}
+              richColors
+              closeButton
+            />
+            <LanguageProvider>{children}</LanguageProvider>
+          </ThemeProvider>
         </StoreProvider>
         <Analytics />
       </body>
