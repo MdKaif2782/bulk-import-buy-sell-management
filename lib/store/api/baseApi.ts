@@ -2,8 +2,8 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { RootState } from '../index'
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'https://middleman-backend.vercel.app',
-  //baseUrl: 'http://localhost:2000',
+  //baseUrl: 'https://middleman-backend.vercel.app',
+  baseUrl: 'http://localhost:2000',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.accessToken
     if (token) {
@@ -12,6 +12,31 @@ const baseQuery = fetchBaseQuery({
     return headers
   },
 })
+
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = 'du4spzaiq';
+const CLOUDINARY_UPLOAD_PRESET = 'gift_corner';
+export const uploadImageToCloudinary = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Image upload failed');
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+};
 
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions)

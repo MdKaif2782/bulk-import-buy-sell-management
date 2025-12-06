@@ -1,4 +1,6 @@
 // types/quotation.ts
+
+// types/quotation.ts
 export interface QuotationItem {
   id: string;
   quantity: number;
@@ -13,6 +15,7 @@ export interface QuotationItem {
     productCode: string;
     productName: string;
     description?: string;
+    imageUrl?: string;
     quantity: number;
     expectedSalePrice: number;
   };
@@ -24,12 +27,18 @@ export interface Quotation {
   companyName: string;
   companyAddress: string;
   companyContact?: string;
+  contactPersonName?: string;
+  subject?: string;
+  body?: string;
+  generalTerms?: string;
+  paymentTerms?: string;
   deliveryTerms?: string;
   deliveryDays?: number;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+  status: 'PENDING' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
   totalAmount: number;
   taxAmount: number;
   moneyInWords?: string;
+  signatureImageUrl?: string;
   createdAt: string;
   updatedAt: string;
   validUntil?: string;
@@ -60,11 +69,17 @@ export interface CreateQuotationRequest {
   companyName: string;
   companyAddress: string;
   companyContact?: string;
+  contactPersonName?: string;
+  subject?: string;
+  body?: string;
+  generalTerms?: string;
+  paymentTerms?: string;
   deliveryTerms?: string;
   deliveryDays?: number;
-  totalAmount?: number;
-  taxAmount?: number;
+  totalAmount: number;
+  taxAmount: number;
   moneyInWords?: string;
+  signatureImageUrl?: string;
   validUntil?: string;
   items: Array<{
     inventoryId: string;
@@ -75,6 +90,23 @@ export interface CreateQuotationRequest {
     taxPercentage?: number;
   }>;
 }
+
+export interface AcceptQuotationRequest {
+  poDate?: string;
+  pdfUrl?: string;
+  externalUrl?: string;
+  commission?:number;
+  items?: Array<{
+    inventoryId: string;
+    unitPrice?: number;
+    packagePrice?: number;
+    quantity?: number;
+    mrp?: number;
+    taxPercentage?: number;
+  }>;
+}
+
+
 
 export interface UpdateQuotationRequest {
   companyName?: string;

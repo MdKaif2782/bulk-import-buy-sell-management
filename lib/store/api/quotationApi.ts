@@ -1,5 +1,5 @@
 // lib/apis/quotationApi.ts
-import { baseApi } from './baseApi';
+import { baseApi, uploadImageToCloudinary } from './baseApi';
 import {
   Quotation,
   QuotationResponse,
@@ -88,6 +88,17 @@ export const quotationApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Quotation'],
     }),
+        // Cloudinary image upload endpoint
+    uploadSignatureImage: builder.mutation<string, File>({
+      query: async (file) => {
+        try {
+          const imageUrl = await uploadImageToCloudinary(file);
+          return { data: imageUrl };
+        } catch (error) {
+          return { error: error as Error };
+        }
+      },
+    }),
   }),
 });
 
@@ -101,4 +112,5 @@ export const {
   useDeleteQuotationMutation,
   useGetExpiredQuotationsQuery,
   useLazyGetQuotationsQuery,
+  useUploadSignatureImageMutation
 } = quotationApi;

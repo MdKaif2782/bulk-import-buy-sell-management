@@ -4,6 +4,7 @@ export interface Inventory {
   productCode: string;
   barcode?: string;
   productName: string;
+  imageUrl?:string
   description?: string;
   quantity: number;
   purchasePrice: number;
