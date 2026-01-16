@@ -55,7 +55,7 @@ export function ProductSelectionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="!max-w-6xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Select Products</DialogTitle>
           <DialogDescription>

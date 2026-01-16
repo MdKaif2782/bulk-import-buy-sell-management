@@ -1,424 +1,468 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { Inventory, InventorySearchParams } from '@/types/inventory';
-import { useGetInventoryQuery } from '@/lib/store/api/inventoryApi';
+import { useState } from 'react';
 import { Sidebar } from '@/components/sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Calculator } from 'lucide-react';
-
-// Sale item type
-interface SaleItem {
-  product: Inventory;
-  quantity: number;
-  price: number;
-}
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  Search, Plus, Eye, Trash2, ShoppingCart, TrendingUp, 
+  DollarSign, Calendar, CreditCard, Package, AlertCircle 
+} from 'lucide-react';
+import { 
+  useGetRetailSalesQuery, 
+  useDeleteRetailSaleMutation,
+  useGetRetailAnalyticsQuery 
+} from '@/lib/store/api/retailSaleApi';
+import { CreateRetailSaleDialog } from '@/components/retail-sale-dialog';
+import { RetailSaleDetailsDialog } from '@/components/retail-sale-details-dialog';
+import { useToast } from '@/components/ui/use-toast';
+import { RetailSale, PaymentMethod } from '@/types/retailSale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function RetailSalesPage() {
-  const [searchParams, setSearchParams] = useState<InventorySearchParams>({
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useState({
     page: 1,
-    limit: 12,
+    limit: 10,
     search: '',
-    sortBy: 'productName',
-    sortOrder: 'asc'
+    startDate: '',
+    endDate: '',
+    paymentMethod: '' as PaymentMethod | '',
   });
 
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [searchInput, setSearchInput] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<RetailSale | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
 
-  const { data: inventoryResponse, isLoading } = useGetInventoryQuery(searchParams);
+  const { data: salesResponse, isLoading, refetch } = useGetRetailSalesQuery(searchParams);
+  const { data: analytics } = useGetRetailAnalyticsQuery({
+    startDate: searchParams.startDate || undefined,
+    endDate: searchParams.endDate || undefined,
+  });
+  const [deleteSale, { isLoading: isDeleting }] = useDeleteRetailSaleMutation();
 
-  // Calculate totals
-  const { subtotal, totalItems } = useMemo(() => {
-    return saleItems.reduce(
-      (acc, item) => ({
-        subtotal: acc.subtotal + (item.price * item.quantity),
-        totalItems: acc.totalItems + item.quantity
-      }),
-      { subtotal: 0, totalItems: 0 }
-    );
-  }, [saleItems]);
-
-  // Handle search
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchParams(prev => ({
-      ...prev,
-      search: searchInput,
-      page: 1
-    }));
+  const handleSearch = (value: string) => {
+    setSearchParams(prev => ({ ...prev, search: value, page: 1 }));
   };
 
-  // Add product to sale
-  const addToSale = (product: Inventory) => {
-    setSaleItems(prev => {
-      const existingItem = prev.find(item => item.product.id === product.id);
-      
-      if (existingItem) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-
-      return [
-        ...prev,
-        {
-          product,
-          quantity: 1,
-          price: product.expectedSalePrice
-        }
-      ];
-    });
+  const handleViewDetails = (sale: RetailSale) => {
+    setSelectedSale(sale);
+    setIsDetailsDialogOpen(true);
   };
 
-  // Update sale item quantity
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromSale(productId);
-      return;
+  const handleDeleteClick = (saleId: string) => {
+    setSaleToDelete(saleId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!saleToDelete) return;
+
+    try {
+      await deleteSale(saleToDelete).unwrap();
+      toast({
+        title: "Success",
+        description: "Sale deleted and inventory restored successfully",
+        variant: "default",
+      });
+      setSaleToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.data?.message || "Failed to delete sale",
+        variant: "destructive",
+      });
     }
-
-    setSaleItems(prev =>
-      prev.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity }
-          : item
-      )
-    );
   };
 
-  // Update sale item price
-  const updatePrice = (productId: string, price: number) => {
-    setSaleItems(prev =>
-      prev.map(item =>
-        item.product.id === productId
-          ? { ...item, price: Math.max(0, price) }
-          : item
-      )
-    );
+  const getPaymentMethodBadge = (method: PaymentMethod) => {
+    const config = {
+      CASH: { label: "Cash", variant: "default" as const },
+      CARD: { label: "Card", variant: "secondary" as const },
+      BANK_TRANSFER: { label: "Bank Transfer", variant: "outline" as const },
+      CHEQUE: { label: "Cheque", variant: "outline" as const },
+    };
+    const { label, variant } = config[method] || config.CASH;
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
-  // Remove from sale
-  const removeFromSale = (productId: string) => {
-    setSaleItems(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  // Handle checkout
-  const handleCheckout = () => {
-    // Here you would typically send the sale data to your API
-    console.log('Sale completed:', {
-      items: saleItems,
-      total: subtotal,
-      timestamp: new Date().toISOString()
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
-    
-    alert(`Sale completed! Total: ৳${subtotal.toFixed(2)}`);
-    setSaleItems([]);
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-BD', {
-      style: 'currency',
-      currency: 'BDT',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const getStockStatus = (quantity: number, minStock?: number) => {
-    if (quantity === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
-    if (minStock && quantity <= minStock) return { label: 'Low Stock', variant: 'secondary' as const };
-    return { label: 'In Stock', variant: 'default' as const };
+    return `৳ ${amount.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`;
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Retail Sales</h1>
-            <p className="text-muted-foreground mt-1">
-              Unofficial Sales - No Purchase Order Required
-            </p>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <ShoppingCart className="w-8 h-8" />
+                Retail Sales
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Point of Sale system for direct inventory sales
+              </p>
+            </div>
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              New Sale
+            </Button>
           </div>
-          <Badge variant="secondary" className="text-lg px-3 py-1">
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            {totalItems} Items
-          </Badge>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Product Listing */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* Search Card */}
+        {/* Analytics Cards */}
+        {analytics && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
-              <CardContent className="p-4">
-                <form onSubmit={handleSearch} className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      type="text"
-                      placeholder="Search products by name, code, or barcode..."
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Button type="submit">
-                    Search
-                  </Button>
-                </form>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                  <DollarSign className="w-4 h-4" />
+                  Total Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(analytics.summary.totalRevenue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {analytics.summary.totalTransactions} transactions
+                </p>
               </CardContent>
             </Card>
 
-            {/* Products Grid */}
             <Card>
-              <CardHeader>
-                <CardTitle>Available Products</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                  <TrendingUp className="w-4 h-4" />
+                  Average Sale
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {isLoading ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    Loading products...
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {inventoryResponse?.data.map((product) => {
-                      const stockStatus = getStockStatus(product.quantity, product.minStockLevel);
-                      return (
-                        <Card key={product.id} className="overflow-hidden">
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-semibold text-lg leading-tight">
-                                {product.productName}
-                              </h3>
-                              <Badge variant={stockStatus.variant}>
-                                {stockStatus.label}
-                              </Badge>
-                            </div>
-                            
-                            <div className="space-y-2 mb-4">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Code:</span>
-                                <span className="font-medium">{product.productCode}</span>
-                              </div>
-                              {product.barcode && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Barcode:</span>
-                                  <span className="font-mono">{product.barcode}</span>
-                                </div>
-                              )}
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Stock:</span>
-                                <span className="font-medium">{product.quantity}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Price:</span>
-                                <span className="font-bold text-primary">
-                                  {formatCurrency(product.expectedSalePrice)}
-                                </span>
-                              </div>
-                            </div>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(analytics.summary.averageTransactionValue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Per transaction
+                </p>
+              </CardContent>
+            </Card>
 
-                            {product.description && (
-                              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                                {product.description}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                  <Package className="w-4 h-4" />
+                  Items Sold
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{analytics.summary.totalItemsSold}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total quantity
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                  <CreditCard className="w-4 h-4" />
+                  Cash Sales
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(analytics.summary.cashSales)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {analytics.paymentMethodBreakdown.find(p => p.paymentMethod === 'CASH')?.percentage.toFixed(1)}% of total
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search by sale number or customer..."
+                  value={searchParams.search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <div>
+                <Input
+                  type="date"
+                  value={searchParams.startDate}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value, page: 1 }))}
+                  placeholder="Start Date"
+                />
+              </div>
+
+              <div>
+                <Input
+                  type="date"
+                  value={searchParams.endDate}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value, page: 1 }))}
+                  placeholder="End Date"
+                />
+              </div>
+
+              <div>
+                <Select
+                  value={searchParams.paymentMethod || "ALL"}
+                  onValueChange={(value) => setSearchParams(prev => ({ 
+                    ...prev, 
+                    paymentMethod: value === "ALL" ? '' : value as PaymentMethod | '', 
+                    page: 1 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Payment Method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Methods</SelectItem>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sales Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Sales History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading sales...</p>
+                </div>
+              </div>
+            ) : !salesResponse || salesResponse.sales.length === 0 ? (
+              <div className="text-center py-12">
+                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-1">No sales found</p>
+                <p className="text-muted-foreground mb-4">
+                  Start by creating your first sale
+                </p>
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Create Sale
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr className="text-left">
+                        <th className="pb-3 font-semibold">Sale #</th>
+                        <th className="pb-3 font-semibold">Date</th>
+                        <th className="pb-3 font-semibold">Customer</th>
+                        <th className="pb-3 font-semibold">Payment</th>
+                        <th className="pb-3 font-semibold text-right">Amount</th>
+                        <th className="pb-3 font-semibold text-right">Items</th>
+                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {salesResponse.sales.map((sale) => (
+                        <tr key={sale.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3">
+                            <p className="font-mono font-medium text-blue-600">{sale.saleNumber}</p>
+                          </td>
+                          <td className="py-3">
+                            <p className="text-sm">{formatDate(sale.saleDate)}</p>
+                          </td>
+                          <td className="py-3">
+                            {sale.customerName ? (
+                              <div>
+                                <p className="font-medium">{sale.customerName}</p>
+                                {sale.customerPhone && (
+                                  <p className="text-sm text-muted-foreground">{sale.customerPhone}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-muted-foreground">Walk-in</p>
+                            )}
+                          </td>
+                          <td className="py-3">
+                            {getPaymentMethodBadge(sale.paymentMethod)}
+                          </td>
+                          <td className="py-3 text-right">
+                            <p className="font-semibold text-green-600">{formatCurrency(sale.totalAmount)}</p>
+                            {sale.discount > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Discount: {formatCurrency(sale.discount)}
                               </p>
                             )}
-
-                            <Button
-                              onClick={() => addToSale(product)}
-                              disabled={product.quantity === 0}
-                              className="w-full"
-                              size="sm"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add to Sale
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {inventoryResponse?.data.length === 0 && !isLoading && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No products found matching your search.
-                  </div>
-                )}
+                          </td>
+                          <td className="py-3 text-right">
+                            <Badge variant="outline">{sale.items.length} items</Badge>
+                          </td>
+                          <td className="py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewDetails(sale)}
+                                className="gap-1"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteClick(sale.id)}
+                                className="gap-1 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Pagination */}
-                {inventoryResponse?.meta && (
-                  <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">
-                      Page {inventoryResponse.meta.page} of {inventoryResponse.meta.totalPages}
-                      {' • '}
-                      {inventoryResponse.meta.total} total products
-                    </div>
+                {salesResponse.pagination.pages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {salesResponse.sales.length} of {salesResponse.pagination.total} sales
+                    </p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSearchParams(prev => ({ ...prev, page: prev.page! - 1 }))}
+                        onClick={() => setSearchParams(prev => ({ ...prev, page: prev.page - 1 }))}
                         disabled={searchParams.page === 1}
                       >
                         Previous
                       </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: salesResponse.pagination.pages }, (_, i) => i + 1)
+                          .filter(page => {
+                            const current = searchParams.page;
+                            return page === 1 || 
+                                   page === salesResponse.pagination.pages || 
+                                   (page >= current - 1 && page <= current + 1);
+                          })
+                          .map((page, idx, arr) => (
+                            <div key={page}>
+                              {idx > 0 && arr[idx - 1] !== page - 1 && (
+                                <span className="px-2">...</span>
+                              )}
+                              <Button
+                                variant={page === searchParams.page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSearchParams(prev => ({ ...prev, page }))}
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSearchParams(prev => ({ ...prev, page: prev.page! + 1 }))}
-                        disabled={searchParams.page === inventoryResponse.meta.totalPages}
+                        onClick={() => setSearchParams(prev => ({ ...prev, page: prev.page + 1 }))}
+                        disabled={searchParams.page >= salesResponse.pagination.pages}
                       >
                         Next
                       </Button>
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sale Cart */}
-          <div className="space-y-6">
-            <Card className="sticky top-6">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  Current Sale
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {saleItems.length === 0 ? (
-                  <div className="text-center py-8 space-y-2">
-                    <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No items added to sale</p>
-                    <p className="text-sm text-muted-foreground">
-                      Search and add products from the list
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {saleItems.map((item) => (
-                        <Card key={item.product.id} className="p-3">
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-sm leading-tight">
-                                  {item.product.productName}
-                                </h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.product.productCode}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFromSale(item.product.id)}
-                                className="h-8 w-8 p-0 text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-
-                            {/* Quantity Controls */}
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Quantity:</span>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </Button>
-                                <Input
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 0)}
-                                  className="w-20 text-center"
-                                  min="1"
-                                  max={item.product.quantity}
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                  disabled={item.quantity >= item.product.quantity}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Price Input */}
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">Unit Price:</span>
-                                <span className="text-xs text-muted-foreground">
-                                  Original: {formatCurrency(item.product.expectedSalePrice)}
-                                </span>
-                              </div>
-                              <Input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
-                                className="text-right font-medium"
-                                step="0.01"
-                                min="0"
-                              />
-                            </div>
-
-                            {/* Item Total */}
-                            <div className="flex justify-between items-center pt-2 border-t">
-                              <span className="text-sm font-medium">Item Total:</span>
-                              <span className="font-bold text-primary">
-                                {formatCurrency(item.price * item.quantity)}
-                              </span>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-
-                    {/* Summary */}
-                    <div className="space-y-3 pt-4 border-t">
-                      <div className="flex justify-between text-sm">
-                        <span>Total Items:</span>
-                        <span className="font-medium">{totalItems}</span>
-                      </div>
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Grand Total:</span>
-                        <span className="text-primary">{formatCurrency(subtotal)}</span>
-                      </div>
-                      
-                      <Button
-                        onClick={handleCheckout}
-                        disabled={saleItems.length === 0}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <Calculator className="w-5 h-5 mr-2" />
-                        Complete Sale
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Dialogs */}
+      <CreateRetailSaleDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+      />
+
+      <RetailSaleDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        sale={selectedSale}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!saleToDelete} onOpenChange={() => setSaleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the sale and restore the inventory quantities. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
