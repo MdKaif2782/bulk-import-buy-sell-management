@@ -63,6 +63,16 @@ export default function QuotationsPage() {
     }))
   }
 
+  const handleDownload = (quotation: Quotation) => {
+    const pdfUrl = `https://genuine.inovate.it.com/api/quotations/${quotation.id}/pdf`;
+    window.open(pdfUrl, '_blank');
+    toast({
+      title: "Opening PDF",
+      description: "Quotation PDF will open in a new tab.",
+    });
+  };
+
+
   const handleStatusFilter = (
     status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | ""
   ) => {
@@ -189,11 +199,25 @@ export default function QuotationsPage() {
           <div className="p-4 md:p-8">
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {[
-                { label: "Total", value: stats.total },
-                { label: "Pending", value: stats.pending, color: "text-yellow-600" },
-                { label: "Accepted", value: stats.accepted, color: "text-green-600" },
-                { label: "Rejected", value: stats.rejected, color: "text-red-600" },
+              {[{
+                label: "Total",
+                value: stats.total
+              },
+              {
+                label: "Pending",
+                value: stats.pending,
+                color: "text-yellow-600"
+              },
+              {
+                label: "Accepted",
+                value: stats.accepted,
+                color: "text-green-600"
+              },
+              {
+                label: "Rejected",
+                value: stats.rejected,
+                color: "text-red-600"
+              },
               ].map(({ label, value, color }) => (
                 <Card key={label}>
                   <CardHeader className="pb-2">
@@ -261,6 +285,7 @@ export default function QuotationsPage() {
                   onPageChange={handlePageChange}
                   currentPage={searchParams.page}
                   getStatusBadge={getStatusBadge}
+                  onDownload={handleDownload}
                 />
               </CardContent>
             </Card>

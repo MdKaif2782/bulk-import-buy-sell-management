@@ -88,7 +88,8 @@ export const quotationApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Quotation'],
     }),
-        // Cloudinary image upload endpoint
+
+    // Cloudinary image upload endpoint
     uploadSignatureImage: builder.mutation<string, File>({
       query: async (file) => {
         try {
@@ -112,5 +113,5 @@ export const {
   useDeleteQuotationMutation,
   useGetExpiredQuotationsQuery,
   useLazyGetQuotationsQuery,
-  useUploadSignatureImageMutation
+  useUploadSignatureImageMutation,
 } = quotationApi;

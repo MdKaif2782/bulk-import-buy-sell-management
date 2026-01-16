@@ -1,7 +1,7 @@
 // components/quotation-table.tsx
 "use client"
 
-import { Eye, Edit, CheckCircle, XCircle, MoreVertical } from "lucide-react"
+import { Eye, Edit, CheckCircle, XCircle, MoreVertical, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -34,6 +34,7 @@ interface QuotationTableProps {
   onAccept: (quotation: Quotation) => void
   onDelete: (id: string) => void
   onUpdateStatus: (id: string, status: string) => void
+  onDownload: (quotation: Quotation) => void // Add this line
   pagination?: {
     page: number
     limit: number
@@ -53,6 +54,7 @@ export function QuotationTable({
   onAccept,
   onDelete,
   onUpdateStatus,
+  onDownload, // Add this line
   pagination,
   onPageChange,
   currentPage = 1,
@@ -139,6 +141,11 @@ export function QuotationTable({
                       <DropdownMenuItem onClick={() => onEdit(quotation)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem onClick={() => onDownload(quotation)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
                       </DropdownMenuItem>
                       
                       {quotation.status === 'PENDING' && (

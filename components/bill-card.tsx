@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bill } from '@/types/bill';
-import { Calendar, Building, DollarSign, Clock, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import { Calendar, Building, DollarSign, Clock, CheckCircle, AlertCircle, Plus, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,11 @@ export const BillCard: React.FC<BillCardProps> = ({ bill, onAddPayment }) => {
 
   const statusConfig = getStatusConfig(bill.status);
   const StatusIcon = statusConfig.icon;
+
+  const handleDownload = () => {
+    const pdfUrl = `https://genuine.inovate.it.com/api/bills/${bill.id}/pdf`;
+    window.open(pdfUrl, '_blank');
+  };
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -74,6 +79,14 @@ export const BillCard: React.FC<BillCardProps> = ({ bill, onAddPayment }) => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownload}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Bill
+            </Button>
             <Button
               onClick={() => onAddPayment(bill)}
               disabled={bill.status === 'PAID'}

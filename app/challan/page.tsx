@@ -611,7 +611,11 @@ const handleStatusUpdate = async (challanId: string, status: ChallanStatus) => {
                                     )}
                                   </div>
                                   <DialogFooter className="gap-2">
-                                    <Button variant="outline">
+                                    <Button variant="outline" onClick={() => {
+                                      const pdfUrl = `https://genuine.inovate.it.com/api/challans/${challan.id}/pdf`;
+                                      window.open(pdfUrl, '_blank');
+                                      toast.success("Challan PDF will open in a new tab.");
+                                    }}>
                                       <Download className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </Button>

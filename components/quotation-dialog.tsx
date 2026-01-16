@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { useCreateQuotationMutation, useUploadSignatureImageMutation } from "@/lib/store/api/quotationApi"
-import { Plus, Minus, Trash2, Upload, X, FileSignature, FileText, ClipboardCopy } from "lucide-react"
+import { useCreateQuotationMutation } from "@/lib/store/api/quotationApi"
+import { Plus, Minus, Trash2, Upload, X } from "lucide-react"
 import { ProductSelectionDialog } from "@/components/seletc-product-dialogue"
 import { Inventory } from "@/types/inventory"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,21 +34,9 @@ const DEFAULT_PAYMENT_TERMS = `1. 50% advance payment with Purchase Order.
 3. Payment through Bank Transfer/Cheque in favor of our company.
 4. All payments must be cleared before goods are dispatched.`
 
-const DEFAULT_BODY_TEMPLATE = (companyName: string, companyAddress: string, subject: string) => `To
-${companyName}
-${companyAddress}
-
-Sub: ${subject}
-
-We are pleased to submit a quotation for the goods mentioned above. We enclosed descriptions, quantity, unit price, and delivery date of said product.
-
-We hope you will find the quotation reasonable and issue us a work order.
-Please contact us for any clarification.`
-
 export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialogProps) {
   const { toast } = useToast()
   const [createQuotation, { isLoading }] = useCreateQuotationMutation()
-  const [uploadSignatureImage] = useUploadSignatureImageMutation()
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -60,10 +48,8 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
     moneyInWords: "",
     validUntil: "",
     subject: "",
-    body: "",
     generalTerms: DEFAULT_TERMS,
     paymentTerms: DEFAULT_PAYMENT_TERMS,
-    signatureImageUrl: "",
   })
 
   const [items, setItems] = useState<Array<{
@@ -80,7 +66,6 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
   }>>([])
 
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false)
-  const [isUploadingSignature, setIsUploadingSignature] = useState(false)
   const [useDefaultTerms, setUseDefaultTerms] = useState(true)
   const [useDefaultPaymentTerms, setUseDefaultPaymentTerms] = useState(true)
 
@@ -94,18 +79,6 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
       }))
     }
   }, [items])
-
-  // Auto-fill body template when company details and subject are available
-  useEffect(() => {
-    if (formData.companyName && formData.companyAddress && formData.subject && !formData.body) {
-      const bodyTemplate = DEFAULT_BODY_TEMPLATE(
-        formData.companyName,
-        formData.companyAddress,
-        formData.subject
-      )
-      setFormData(prev => ({ ...prev, body: bodyTemplate }))
-    }
-  }, [formData.companyName, formData.companyAddress, formData.subject])
 
   // Calculate totals using useMemo
   const { itemTotals, grandTotal, taxTotal, finalTotal } = useMemo(() => {
@@ -123,36 +96,18 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
     return { itemTotals, grandTotal, taxTotal, finalTotal }
   }, [items])
 
-  // Handle signature image upload
-  const handleSignatureUpload = async (file: File) => {
-    try {
-      setIsUploadingSignature(true)
-      const imageUrl = await uploadSignatureImage(file).unwrap()
-      setFormData(prev => ({ ...prev, signatureImageUrl: imageUrl }))
-      toast({
-        title: "Success",
-        description: "Signature uploaded successfully",
-        variant: "default",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload signature",
-        variant: "destructive",
-      })
-    } finally {
-      setIsUploadingSignature(false)
+  // Auto-fill money in words when finalTotal changes
+  useEffect(() => {
+    if (finalTotal > 0) {
+      setFormData(prev => ({
+        ...prev,
+        moneyInWords: convertNumberToWords(finalTotal)
+      }))
     }
-  }
+  }, [finalTotal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Format money in words if not provided
-    let moneyInWords = formData.moneyInWords
-    if (!moneyInWords && finalTotal > 0) {
-      moneyInWords = convertNumberToWords(finalTotal)
-    }
 
     try {
       await createQuotation({
@@ -170,7 +125,7 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
         })),
         totalAmount: finalTotal,
         taxAmount: taxTotal,
-        moneyInWords: moneyInWords,
+        moneyInWords: formData.moneyInWords,
       }).unwrap()
 
       toast({
@@ -200,10 +155,8 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
       moneyInWords: "",
       validUntil: "",
       subject: "",
-      body: "",
       generalTerms: DEFAULT_TERMS,
       paymentTerms: DEFAULT_PAYMENT_TERMS,
-      signatureImageUrl: "",
     })
     setItems([])
     setUseDefaultTerms(true)
@@ -314,32 +267,10 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
     return words.trim() + ' Taka Only'
   }
 
-  const autoFillMoneyInWords = () => {
-    if (finalTotal > 0) {
-      setFormData(prev => ({
-        ...prev,
-        moneyInWords: convertNumberToWords(finalTotal)
-      }))
-    }
-  }
-
-  const autoFillBody = () => {
-    if (formData.companyName && formData.companyAddress && formData.subject) {
-      setFormData(prev => ({
-        ...prev,
-        body: DEFAULT_BODY_TEMPLATE(prev.companyName, prev.companyAddress, prev.subject)
-      }))
-    }
-  }
-
-  const clearSignature = () => {
-    setFormData(prev => ({ ...prev, signatureImageUrl: "" }))
-  }
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="!max-w-[85vw] max-h-[95vh] overflow-y-auto">
+        <DialogContent className="max-w-[85vw]! max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Quotation</DialogTitle>
             <DialogDescription>
@@ -360,40 +291,13 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
                 />
               </div>
               <div>
-                <Label htmlFor="companyContact">Company Contact</Label>
+                <Label htmlFor="companyContact">Company Contact (Phone)</Label>
                 <Input
                   id="companyContact"
+                  type="tel"
+                  placeholder="+880XXXXXXXXXX"
                   value={formData.companyContact}
                   onChange={(e) => setFormData(prev => ({ ...prev, companyContact: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="contactPersonName">Contact Person</Label>
-                <Input
-                  id="contactPersonName"
-                  value={formData.contactPersonName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contactPersonName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="subject">
-                  Subject
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={autoFillBody}
-                    className="ml-2 h-6"
-                    disabled={!formData.companyName || !formData.subject}
-                  >
-                    <ClipboardCopy className="w-3 h-3 mr-1" />
-                    Auto-fill Body
-                  </Button>
-                </Label>
-                <Input
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
                 />
               </div>
               <div className="md:col-span-2">
@@ -405,6 +309,64 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
                   required
                 />
               </div>
+              <div>
+                <Label htmlFor="contactPersonName">Contact Person</Label>
+                <Input
+                  id="contactPersonName"
+                  value={formData.contactPersonName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contactPersonName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Items Section - moved here after company address */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-lg">Quotation Items</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setIsProductDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add from Inventory
+                  </Button>
+                </div>
+              </div>
+
+              {items.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                  <p className="text-muted-foreground">No items added yet. Select items to auto-fill the subject.</p>
+                  <Button
+                    type="button"
+                    onClick={() => setIsProductDialogOpen(true)}
+                    variant="outline"
+                    className="mt-2 gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Select Products
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Subject - auto-filled after items selected */}
+            {items.length > 0 && (
+              <div>
+                <Label htmlFor="subject">Subject (Auto-filled)</Label>
+                <Input
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            )}
+
+            {/* Delivery and Validity Information */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="deliveryTerms">Delivery Terms</Label>
                 <Input
@@ -434,33 +396,8 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
               </div>
             </div>
 
-            {/* Body and Terms Sections */}
+            {/* Terms and Conditions Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Body Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="body" className="text-lg">Body</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={autoFillBody}
-                    disabled={!formData.companyName || !formData.subject}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Auto-fill
-                  </Button>
-                </div>
-                <Textarea
-                  id="body"
-                  value={formData.body}
-                  onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
-                  className="min-h-[200px] font-mono text-sm"
-                  placeholder="Quotation body text..."
-                />
-              </div>
-
-              {/* Terms and Conditions Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="generalTerms" className="text-lg">Terms & Conditions</Label>
@@ -510,94 +447,9 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
               </div>
             </div>
 
-            {/* Signature Upload Section */}
-            <div className="border rounded-lg p-4">
-              <Label className="text-lg flex items-center gap-2 mb-4">
-                <FileSignature className="w-5 h-5" />
-                Signature
-              </Label>
-              
-              {formData.signatureImageUrl ? (
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative border rounded-lg p-2">
-                    <img 
-                      src={formData.signatureImageUrl} 
-                      alt="Signature" 
-                      className="h-32 object-contain"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={clearSignature}
-                      className="absolute top-2 right-2 h-6 w-6 p-0"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <p className="text-sm text-green-600">Signature uploaded successfully</p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">PNG, JPG or GIF (MAX. 800x400px)</p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          handleSignatureUpload(file)
-                        }
-                      }}
-                      disabled={isUploadingSignature}
-                    />
-                  </label>
-                </div>
-              )}
-              {isUploadingSignature && (
-                <p className="text-sm text-blue-600 mt-2">Uploading signature...</p>
-              )}
-            </div>
-
-            {/* Items Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label className="text-lg">Quotation Items</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => setIsProductDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add from Inventory
-                  </Button>
-                </div>
-              </div>
-
-              {items.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                  <p className="text-muted-foreground">No items added yet</p>
-                  <Button
-                    type="button"
-                    onClick={() => setIsProductDialogOpen(true)}
-                    variant="outline"
-                    className="mt-2 gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Select Products
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
+            {/* Items details rendering - shown only when items exist */}
+            {items.length > 0 && (
+              <div className="space-y-4">
                   {items.map((item, index) => {
                     const itemTotal = itemTotals[index] || 0
                     return (
@@ -711,9 +563,8 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
                       </div>
                     )
                   })}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Summary and Money in Words */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -738,27 +589,17 @@ export function CreateQuotationDialog({ isOpen, onClose }: CreateQuotationDialog
 
               {/* Money in Words Section */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="moneyInWords" className="text-lg">Amount in Words</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={autoFillMoneyInWords}
-                    disabled={finalTotal <= 0}
-                  >
-                    Auto-fill
-                  </Button>
-                </div>
+                <Label htmlFor="moneyInWords" className="text-lg">Amount in Words (Auto-filled)</Label>
                 <Textarea
                   id="moneyInWords"
                   value={formData.moneyInWords}
                   onChange={(e) => setFormData(prev => ({ ...prev, moneyInWords: e.target.value }))}
-                  className="min-h-[100px]"
-                  placeholder="e.g., Five Thousand Taka Only"
+                  className="min-h-[100px] bg-muted"
+                  placeholder="Will be auto-filled when amount is calculated..."
+                  readOnly
                 />
                 {formData.moneyInWords && (
-                  <p className="text-sm text-green-600">✓ Amount in words set</p>
+                  <p className="text-sm text-green-600">✓ Amount in words auto-filled</p>
                 )}
               </div>
             </div>

@@ -96,9 +96,11 @@ export function EditQuotationDialog({ isOpen, onClose, quotation }: EditQuotatio
               />
             </div>
             <div>
-              <Label htmlFor="companyContact">Company Contact</Label>
+              <Label htmlFor="companyContact">Company Contact (Phone)</Label>
               <Input
                 id="companyContact"
+                type="tel"
+                placeholder="+880XXXXXXXXXX"
                 value={formData.companyContact}
                 onChange={(e) => setFormData(prev => ({ ...prev, companyContact: e.target.value }))}
               />

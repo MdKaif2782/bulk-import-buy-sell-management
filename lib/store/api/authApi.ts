@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { setCredentials, logOut, updateTokens } from '../slices/authSlice'
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://103.132.96.118/api/auth',
+  baseUrl: 'https://genuine.inovate.it.com/api/auth',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as any).auth.accessToken
     if (token) {

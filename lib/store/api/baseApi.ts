@@ -4,7 +4,7 @@ import { RootState } from '../index'
 const baseQuery = fetchBaseQuery({
   //baseUrl: 'https://middleman-backend.vercel.app',
   //baseUrl: 'http://localhost:2000',
-  baseUrl:"http://103.132.96.118/api",
+  baseUrl:"https://genuine.inovate.it.com/api",
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.accessToken
     if (token) {

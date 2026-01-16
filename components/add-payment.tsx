@@ -67,6 +67,10 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({
         },
       }).unwrap();
 
+      // Open PDF in new tab
+      const pdfUrl = `https://genuine.inovate.it.com/api/bills/${bill.id}/pdf`;
+      window.open(pdfUrl, '_blank');
+
       // Reset form and close dialog
       setAmount(0);
       setPaymentMethod('CASH');

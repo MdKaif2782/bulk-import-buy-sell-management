@@ -29,7 +29,6 @@ export interface Quotation {
   companyContact?: string;
   contactPersonName?: string;
   subject?: string;
-  body?: string;
   generalTerms?: string;
   paymentTerms?: string;
   deliveryTerms?: string;
@@ -38,7 +37,6 @@ export interface Quotation {
   totalAmount: number;
   taxAmount: number;
   moneyInWords?: string;
-  signatureImageUrl?: string;
   createdAt: string;
   updatedAt: string;
   validUntil?: string;
@@ -71,7 +69,6 @@ export interface CreateQuotationRequest {
   companyContact?: string;
   contactPersonName?: string;
   subject?: string;
-  body?: string;
   generalTerms?: string;
   paymentTerms?: string;
   deliveryTerms?: string;
@@ -79,7 +76,6 @@ export interface CreateQuotationRequest {
   totalAmount: number;
   taxAmount: number;
   moneyInWords?: string;
-  signatureImageUrl?: string;
   validUntil?: string;
   items: Array<{
     inventoryId: string;
