@@ -20,26 +20,15 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
   const { data: salesSummary, isLoading: summaryLoading } = useGetSalesSummaryQuery({})
   const { data: periodicSales, isLoading: periodicLoading } = useGetPeriodicSalesQuery({})
 
-  const handleExport = () => {
-    toast.info("Exporting sales report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   if (preview) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Sales Overview
-            </CardTitle>
-            <CardDescription>Revenue and profit performance</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Sales Overview
+          </CardTitle>
+          <CardDescription>Revenue and profit performance</CardDescription>
         </CardHeader>
         <CardContent>
           {summaryLoading ? (
@@ -74,17 +63,11 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Sales Reports</h2>
-          <p className="text-muted-foreground">
-            Revenue analysis, profit margins, and sales performance
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Sales Reports</h2>
+        <p className="text-muted-foreground">
+          Revenue analysis, profit margins, and sales performance
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

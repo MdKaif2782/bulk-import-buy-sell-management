@@ -16,12 +16,6 @@ export function BusinessHealth() {
   const { data: businessHealth, isLoading: healthLoading } = useGetBusinessHealthQuery({})
   const { data: corporateSummary, isLoading: summaryLoading } = useGetCorporateSummaryQuery({})
 
-  const handleExport = () => {
-    toast.info("Exporting business health report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   const getHealthScore = (health: any) => {
     if (!health) return 0
     let score = 0
@@ -43,17 +37,11 @@ export function BusinessHealth() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Business Health</h2>
-          <p className="text-muted-foreground">
-            Comprehensive business performance and financial health metrics
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Business Health</h2>
+        <p className="text-muted-foreground">
+          Comprehensive business performance and financial health metrics
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

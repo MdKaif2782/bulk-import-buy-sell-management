@@ -27,26 +27,15 @@ export function InvestorReports({ preview = false }: InvestorReportsProps) {
     { skip: !selectedInvestor }
   )
 
-  const handleExport = () => {
-    toast.info("Exporting investor report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   if (preview) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Investor Overview
-            </CardTitle>
-            <CardDescription>Investment performance and payouts</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Investor Overview
+          </CardTitle>
+          <CardDescription>Investment performance and payouts</CardDescription>
         </CardHeader>
         <CardContent>
           {investorsLoading ? (
@@ -86,17 +75,11 @@ export function InvestorReports({ preview = false }: InvestorReportsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Investor Reports</h2>
-          <p className="text-muted-foreground">
-            Investment performance, profit distribution, and payouts
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Investor Reports</h2>
+        <p className="text-muted-foreground">
+          Investment performance, profit distribution, and payouts
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

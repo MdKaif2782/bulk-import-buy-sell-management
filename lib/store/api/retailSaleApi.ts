@@ -64,6 +64,24 @@ export const retailSaleApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['RetailSale', 'Inventory', 'Statistics'],
     }),
+
+    // Download invoice PDF
+    downloadInvoice: builder.mutation<Blob, string>({
+      query: (id) => ({
+        url: `/retail-sales/invoice/${id}`,
+        method: 'GET',
+        responseHandler: (response: Response) => response.blob(),
+      }),
+    }),
+
+    // Download receipt PDF
+    downloadReceipt: builder.mutation<Blob, string>({
+      query: (id) => ({
+        url: `/retail-sales/receipt/${id}`,
+        method: 'GET',
+        responseHandler: (response: Response) => response.blob(),
+      }),
+    }),
   }),
 });
 
@@ -73,4 +91,6 @@ export const {
   useGetRetailSaleByIdQuery,
   useGetRetailAnalyticsQuery,
   useDeleteRetailSaleMutation,
+  useDownloadInvoiceMutation,
+  useDownloadReceiptMutation,
 } = retailSaleApi;

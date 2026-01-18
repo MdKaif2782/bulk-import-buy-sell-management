@@ -15,17 +15,21 @@ import {
 } from '@/components/ui/select';
 import { 
   Search, Plus, Eye, Trash2, ShoppingCart, TrendingUp, 
-  DollarSign, Calendar, CreditCard, Package, AlertCircle 
+  DollarSign, Calendar, CreditCard, Package, AlertCircle, FileText, Receipt 
 } from 'lucide-react';
 import { 
   useGetRetailSalesQuery, 
   useDeleteRetailSaleMutation,
-  useGetRetailAnalyticsQuery 
+  useGetRetailAnalyticsQuery,
+  useDownloadInvoiceMutation,
+  useDownloadReceiptMutation
 } from '@/lib/store/api/retailSaleApi';
 import { CreateRetailSaleDialog } from '@/components/retail-sale-dialog';
 import { RetailSaleDetailsDialog } from '@/components/retail-sale-details-dialog';
+import { RetailSaleSuccessDialog } from '@/components/retail-sale-success-dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { RetailSale, PaymentMethod } from '@/types/retailSale';
+import { toast as sonnerToast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +54,7 @@ export default function RetailSalesPage() {
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<RetailSale | null>(null);
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
 
@@ -59,6 +64,8 @@ export default function RetailSalesPage() {
     endDate: searchParams.endDate || undefined,
   });
   const [deleteSale, { isLoading: isDeleting }] = useDeleteRetailSaleMutation();
+  const [downloadInvoice] = useDownloadInvoiceMutation();
+  const [downloadReceipt] = useDownloadReceiptMutation();
 
   const handleSearch = (value: string) => {
     setSearchParams(prev => ({ ...prev, search: value, page: 1 }));
@@ -67,6 +74,49 @@ export default function RetailSalesPage() {
   const handleViewDetails = (sale: RetailSale) => {
     setSelectedSale(sale);
     setIsDetailsDialogOpen(true);
+  };
+
+  const handleShowSuccessDialog = (sale: RetailSale) => {
+    setSelectedSale(sale);
+    setIsSuccessDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = async (sale: RetailSale) => {
+    try {
+      const blob = await downloadInvoice(sale.id).unwrap();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${sale.saleNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      sonnerToast.success("Invoice downloaded successfully");
+    } catch (error: any) {
+      sonnerToast.error("Failed to download invoice", {
+        description: error?.data?.message || "Please try again later"
+      });
+    }
+  };
+
+  const handleDownloadReceipt = async (sale: RetailSale) => {
+    try {
+      const blob = await downloadReceipt(sale.id).unwrap();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${sale.saleNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      sonnerToast.success("Receipt downloaded successfully");
+    } catch (error: any) {
+      sonnerToast.error("Failed to download receipt", {
+        description: error?.data?.message || "Please try again later"
+      });
+    }
   };
 
   const handleDeleteClick = (saleId: string) => {
@@ -352,11 +402,19 @@ export default function RetailSalesPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => handleShowSuccessDialog(sale)}
+                                className="gap-1"
+                                title="Download Documents"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleViewDetails(sale)}
                                 className="gap-1"
                               >
                                 <Eye className="w-4 h-4" />
-                                View
                               </Button>
                               <Button
                                 variant="outline"
@@ -365,7 +423,6 @@ export default function RetailSalesPage() {
                                 className="gap-1 text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                Delete
                               </Button>
                             </div>
                           </td>
@@ -434,11 +491,18 @@ export default function RetailSalesPage() {
       <CreateRetailSaleDialog
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
+        onSuccess={handleShowSuccessDialog}
       />
 
       <RetailSaleDetailsDialog
         isOpen={isDetailsDialogOpen}
         onClose={() => setIsDetailsDialogOpen(false)}
+        sale={selectedSale}
+      />
+
+      <RetailSaleSuccessDialog
+        open={isSuccessDialogOpen}
+        onOpenChange={setIsSuccessDialogOpen}
         sale={selectedSale}
       />
 

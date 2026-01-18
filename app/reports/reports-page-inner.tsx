@@ -17,6 +17,7 @@ import { SalesReports } from "@/components/sales-reports"
 import { EmployeeReports } from "@/components/employee-reports"
 import { BusinessHealth } from "@/components/business-health"
 import { Sidebar } from "@/components/sidebar"
+import { ReportDownloadDialog } from "@/components/report-download-dialog"
 
 export default function ReportsPage() {
   const searchParams = useSearchParams()
@@ -25,6 +26,11 @@ export default function ReportsPage() {
   // Get tab from URL parameter or default to "overview"
   const urlTab = searchParams.get("tab")
   const [activeTab, setActiveTab] = useState(urlTab || "overview")
+  
+  // Download dialog state
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
+  const [currentReportType, setCurrentReportType] = useState<'financial' | 'inventory' | 'investor' | 'sales' | 'employee' | 'expense' | 'summary'>('summary')
+  const [currentReportTitle, setCurrentReportTitle] = useState('Summary')
 
   // Update URL when tab changes
   const handleTabChange = (tab: string) => {
@@ -47,6 +53,12 @@ export default function ReportsPage() {
     toast.info(`Exporting ${type} report...`, {
       description: "This feature will be available soon"
     })
+  }
+
+  const openDownloadDialog = (reportType: typeof currentReportType, reportTitle: string) => {
+    setCurrentReportType(reportType)
+    setCurrentReportTitle(reportTitle)
+    setDownloadDialogOpen(true)
   }
 
   // Available tabs for validation
@@ -74,12 +86,11 @@ export default function ReportsPage() {
           </div>
           <div className="flex gap-2">
             <Button 
-              variant="outline" 
-              onClick={() => handleExport("comprehensive")}
+              onClick={() => openDownloadDialog('summary', 'Comprehensive Summary')}
               className="gap-2"
             >
               <Download className="w-4 h-4" />
-              Export Report
+              Download Summary Report
             </Button>
           </div>
         </div>
@@ -130,26 +141,76 @@ export default function ReportsPage() {
 
           {/* Inventory Tab */}
           <TabsContent value="inventory" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => openDownloadDialog('inventory', 'Inventory')}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Inventory Report
+              </Button>
+            </div>
             <InventoryReports />
           </TabsContent>
 
           {/* Financial Tab */}
           <TabsContent value="financial" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => openDownloadDialog('financial', 'Financial')}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Financial Report
+              </Button>
+            </div>
             <FinancialReports />
           </TabsContent>
 
           {/* Investors Tab */}
           <TabsContent value="investors" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => openDownloadDialog('investor', 'Investor')}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Investor Report
+              </Button>
+            </div>
             <InvestorReports />
           </TabsContent>
 
           {/* Sales Tab */}
           <TabsContent value="sales" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => openDownloadDialog('sales', 'Sales')}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Sales Report
+              </Button>
+            </div>
             <SalesReports />
           </TabsContent>
 
           {/* Employees Tab */}
           <TabsContent value="employees" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => openDownloadDialog('employee', 'Employee')}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Employee Report
+              </Button>
+            </div>
             <EmployeeReports />
           </TabsContent>
 
@@ -158,6 +219,14 @@ export default function ReportsPage() {
             <BusinessHealth />
           </TabsContent>
         </Tabs>
+
+        {/* Download Dialog */}
+        <ReportDownloadDialog
+          open={downloadDialogOpen}
+          onOpenChange={setDownloadDialogOpen}
+          reportType={currentReportType}
+          reportTitle={currentReportTitle}
+        />
       </div>
     </div>
   )

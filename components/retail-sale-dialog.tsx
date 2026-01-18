@@ -13,11 +13,12 @@ import { useCreateRetailSaleMutation } from "@/lib/store/api/retailSaleApi"
 import { Plus, Trash2, ShoppingCart } from "lucide-react"
 import { ProductSelectionDialog } from "@/components/seletc-product-dialogue"
 import { Inventory } from "@/types/inventory"
-import { PaymentMethod, CreateRetailSaleItemRequest } from "@/types/retailSale"
+import { PaymentMethod, CreateRetailSaleItemRequest, RetailSale } from "@/types/retailSale"
 
 interface CreateRetailSaleDialogProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: (sale: RetailSale) => void
 }
 
 interface SaleItem extends CreateRetailSaleItemRequest {
@@ -28,7 +29,7 @@ interface SaleItem extends CreateRetailSaleItemRequest {
   imageUrl?: string
 }
 
-export function CreateRetailSaleDialog({ isOpen, onClose }: CreateRetailSaleDialogProps) {
+export function CreateRetailSaleDialog({ isOpen, onClose, onSuccess }: CreateRetailSaleDialogProps) {
   const { toast } = useToast()
   const [createRetailSale, { isLoading }] = useCreateRetailSaleMutation()
 
@@ -65,7 +66,7 @@ export function CreateRetailSaleDialog({ isOpen, onClose }: CreateRetailSaleDial
     }
 
     try {
-      await createRetailSale({
+      const sale = await createRetailSale({
         items: items.map(item => ({
           inventoryId: item.inventoryId,
           quantity: item.quantity,
@@ -87,6 +88,11 @@ export function CreateRetailSaleDialog({ isOpen, onClose }: CreateRetailSaleDial
       })
 
       handleClose()
+      
+      // Trigger success dialog
+      if (onSuccess) {
+        onSuccess(sale)
+      }
     } catch (error: any) {
       toast({
         title: "Error",

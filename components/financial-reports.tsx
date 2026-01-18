@@ -22,12 +22,6 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
   const { data: receivables, isLoading: receivablesLoading } = useGetCompanyReceivablesQuery()
   const { data: aging, isLoading: agingLoading } = useGetReceivableAgingQuery()
 
-  const handleExport = () => {
-    toast.info("Exporting financial report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   const getStatusBadge = (status: string) => {
     const variants = {
       pending: "secondary",
@@ -46,17 +40,12 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
   if (preview) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Financial Overview
-            </CardTitle>
-            <CardDescription>Billing and receivables summary</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Financial Overview
+          </CardTitle>
+          <CardDescription>Billing and receivables summary</CardDescription>
         </CardHeader>
         <CardContent>
           {billingLoading ? (
@@ -91,17 +80,11 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Financial Reports</h2>
-          <p className="text-muted-foreground">
-            Billing, receivables, and financial performance
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Financial Reports</h2>
+        <p className="text-muted-foreground">
+          Billing, receivables, and financial performance
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

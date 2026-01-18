@@ -20,26 +20,15 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
   const { data: salarySummary, isLoading: summaryLoading } = useGetSalarySummaryQuery()
   const { data: monthlySalaries, isLoading: monthlyLoading } = useGetMonthlySalariesQuery({})
 
-  const handleExport = () => {
-    toast.info("Exporting employee report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   if (preview) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Employee Overview
-            </CardTitle>
-            <CardDescription>Salary and workforce analytics</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Employee Overview
+          </CardTitle>
+          <CardDescription>Salary and workforce analytics</CardDescription>
         </CardHeader>
         <CardContent>
           {summaryLoading ? (
@@ -74,17 +63,11 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Employee Reports</h2>
-          <p className="text-muted-foreground">
-            Workforce analytics, salary expenses, and payroll management
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Employee Reports</h2>
+        <p className="text-muted-foreground">
+          Workforce analytics and salary management
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

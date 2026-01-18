@@ -22,26 +22,15 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
   const { data: companyStock, isLoading: companyLoading } = useGetCompanyWiseStockQuery()
   const { data: lowStock, isLoading: lowStockLoading } = useGetLowStockReportQuery()
 
-  const handleExport = () => {
-    toast.info("Exporting inventory report...", {
-      description: "This feature will be available soon"
-    })
-  }
-
   if (preview) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Inventory Overview
-            </CardTitle>
-            <CardDescription>Stock levels and inventory valuation</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Inventory Overview
+          </CardTitle>
+          <CardDescription>Stock levels and inventory valuation</CardDescription>
         </CardHeader>
         <CardContent>
           {summaryLoading ? (
@@ -76,17 +65,11 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Inventory Reports</h2>
-          <p className="text-muted-foreground">
-            Comprehensive inventory analysis and stock management
-          </p>
-        </div>
-        <Button onClick={handleExport} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Report
-        </Button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Inventory Reports</h2>
+        <p className="text-muted-foreground">
+          Comprehensive inventory analysis and stock management
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

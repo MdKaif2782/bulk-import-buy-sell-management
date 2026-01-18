@@ -200,6 +200,25 @@ export const reportsApi = baseApi.injectEndpoints({
         method: 'POST',
       }),
     }),
+
+    // ==================== PDF REPORTS ====================
+    downloadPdfReport: builder.mutation<Blob, {
+      type: 'financial' | 'inventory' | 'investor' | 'sales' | 'employee' | 'expense' | 'summary';
+      year?: number;
+      month?: number;
+    }>({
+      query: ({ type, year, month }) => {
+        const params = new URLSearchParams();
+        if (year) params.append('year', year.toString());
+        if (month) params.append('month', month.toString());
+        
+        return {
+          url: `/reports/pdf/${type}${params.toString() ? `?${params.toString()}` : ''}`,
+          method: 'GET',
+          responseHandler: (response: Response) => response.blob(),
+        };
+      },
+    }),
   }),
 });
 
@@ -243,4 +262,7 @@ export const {
   useExportInventoryReportMutation,
   useExportFinancialReportMutation,
   useExportInvestorReportMutation,
+
+  // PDF Reports
+  useDownloadPdfReportMutation,
 } = reportsApi;
