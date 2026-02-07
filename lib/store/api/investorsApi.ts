@@ -82,6 +82,9 @@ export const investorsApi = baseApi.injectEndpoints({
         url: `/investors/${id}/due-summary`,
         method: 'GET',
       }),
+      providesTags: (result, error, id) => [
+        { type: 'Investor', id: `DUE_SUMMARY_${id}` },
+      ],
     }),
 
     payInvestor: builder.mutation<PaymentResponse, { id: string; data: CreateInvestorPaymentData }>({
@@ -89,7 +92,12 @@ export const investorsApi = baseApi.injectEndpoints({
         url: `/investors/${id}/pay`,
         method: 'POST',
         body: data,
-      })
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Investor', id: `DUE_SUMMARY_${id}` },
+        { type: 'Investor', id: 'STATS' },
+        { type: 'Investor', id: 'PERFORMANCE' },
+      ],
     }),
 
     // ==================== Statistics & Reports ====================
