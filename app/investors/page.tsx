@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, PieChartIcon, Loader2, Eye, DollarSign, History, Activity } from "lucide-react"
+import { Plus, Search, PieChartIcon, Loader2 } from "lucide-react"
 import { InvestorDialog } from "@/components/investor-dialog"
 import { InvestorTable } from "@/components/investor-table"
+import { InvestorDueSummaryDialog } from "@/components/investor-due-summary-dialog"
+import { PayInvestorDialog } from "@/components/pay-investor-dialog"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { useLanguage } from "@/components/language-provider"
-import { useAuth } from "@/hooks/useAuth"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import {
   useGetInvestorsQuery,
@@ -21,19 +22,11 @@ import {
   useUpdateInvestorMutation,
   useDeleteInvestorMutation,
   useToggleInvestorStatusMutation,
-  useGetInvestorDueSummaryQuery,
-  usePayInvestorMutation,
 } from "@/lib/store/api/investorsApi"
 import {
   Investor as ApiInvestor,
-  InvestorStatistics,
-  InvestorPerformance,
-  EquityDistribution,
   CreateInvestorData,
   UpdateInvestorData,
-  DueSummary,
-  CreateInvestorPaymentData,
-  PaymentMethod,
 } from "@/types/investor"
 
 // Local type for form data
@@ -48,331 +41,13 @@ interface InvestorFormData {
   isActive: boolean
 }
 
-// Payment Dialog Component
-interface PaymentDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onPay: (data: CreateInvestorPaymentData) => Promise<void>
-  dueAmount: number
-  isLoading: boolean
-}
-
-function PaymentDialog({ isOpen, onClose, onPay, dueAmount, isLoading }: PaymentDialogProps) {
-  const [amount, setAmount] = useState("")
-  const [description, setDescription] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.BANK_TRANSFER)
-  const [reference, setReference] = useState("")
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await onPay({
-      amount: parseFloat(amount),
-      description,
-      paymentMethod,
-      reference: reference || undefined,
-    })
-    handleClose()
-  }
-
-  const handleClose = () => {
-    setAmount("")
-    setDescription("")
-    setReference("")
-    setPaymentMethod(PaymentMethod.BANK_TRANSFER)
-    onClose()
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background p-6 rounded-lg w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">Make Payment</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Amount</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Maximum: ৳${dueAmount.toLocaleString()}`}
-              max={dueAmount}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Payment Method</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value={PaymentMethod.CASH}>Cash</option>
-              <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
-              <option value={PaymentMethod.CHEQUE}>Cheque</option>
-              <option value={PaymentMethod.CARD}>Card</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Description</label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Payment description"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Reference (Optional)</label>
-            <Input
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="Transaction reference"
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading || !amount || parseFloat(amount) > dueAmount}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
-              Process Payment
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-// Investor Details Dialog Component
-interface InvestorDetailsDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  investorId: string | null
-}
-
-function InvestorDetailsDialog({ isOpen, onClose, investorId }: InvestorDetailsDialogProps) {
-  const { data: dueSummary, isLoading } = useGetInvestorDueSummaryQuery(investorId!, {
-    skip: !investorId,
-  })
-  const [payInvestor, { isLoading: isPaying }] = usePayInvestorMutation()
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
-
-  const handlePayment = async (paymentData: CreateInvestorPaymentData) => {
-    if (!investorId) return
-    try {
-      await payInvestor({ id: investorId, data: paymentData }).unwrap()
-      setShowPaymentDialog(false)
-    } catch (error) {
-      console.error("Failed to process payment:", error)
-    }
-  }
-
-  if (!isOpen || !investorId) return null
-
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-background p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : dueSummary ? (
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-2xl font-bold">{dueSummary.investor.name}</h3>
-                  <p className="text-muted-foreground">{dueSummary.investor.email}</p>
-                </div>
-                <Button onClick={onClose} variant="outline">
-                  Close
-                </Button>
-              </div>
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Investment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">৳{dueSummary.summary.totalInvestment.toLocaleString()}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Due</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      ৳{dueSummary.summary.totalDue.toLocaleString()}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Payable Now</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-orange-600">
-                      ৳{dueSummary.summary.payableNow.toLocaleString()}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">ROI</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {dueSummary.summary.overallROI.toFixed(1)}%
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Pay Button */}
-              {dueSummary.summary.payableNow > 0 && (
-                <Button 
-                  onClick={() => setShowPaymentDialog(true)}
-                  className="w-full"
-                  size="lg"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Pay ৳{dueSummary.summary.payableNow.toLocaleString()} Now
-                </Button>
-              )}
-
-              {/* Investment Breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Investment Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {dueSummary.investmentBreakdown.map((investment) => (
-                      <div key={investment.investmentId} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-semibold">{investment.poNumber}</h4>
-                            <p className="text-sm text-muted-foreground">{investment.vendorName}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">৳{investment.investmentAmount.toLocaleString()}</p>
-                            <p className="text-sm text-muted-foreground">{investment.profitPercentage}% Profit</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Profit Earned:</span>
-                            <p className="font-medium">৳{investment.profitEarned.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Payable Now:</span>
-                            <p className="font-medium">৳{investment.payableNow.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">ROI:</span>
-                            <p className="font-medium">{investment.roi.toFixed(1)}%</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Status:</span>
-                            <p className="font-medium">{investment.poStatus}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment History */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <History className="w-5 h-5" />
-                    Payment History
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {dueSummary.paymentHistory.map((payment) => (
-                      <div key={payment.id} className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">{new Date(payment.paymentDate).toLocaleDateString()}</p>
-                          <p className="text-sm text-muted-foreground">{payment.description}</p>
-                          {payment.paymentMethod && (
-                            <p className="text-xs text-muted-foreground">{payment.paymentMethod}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-green-600">৳{payment.amount.toLocaleString()}</p>
-                          {payment.reference && (
-                            <p className="text-xs text-muted-foreground">Ref: {payment.reference}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {dueSummary.recentActivity.map((activity, index) => (
-                      <div key={index} className="flex justify-between items-center border-b pb-2">
-                        <div>
-                          <p className="font-medium">{activity.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(activity.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">৳{activity.amount.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {activity.type.toLowerCase().replace(/_/g, ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div>No data found</div>
-          )}
-        </div>
-      </div>
-
-      {/* Payment Dialog */}
-      <PaymentDialog
-        isOpen={showPaymentDialog}
-        onClose={() => setShowPaymentDialog(false)}
-        onPay={handlePayment}
-        dueAmount={dueSummary?.summary.payableNow || 0}
-        isLoading={isPaying}
-      />
-    </>
-  )
-}
-
 export default function InvestorsPage() {
   const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingInvestor, setEditingInvestor] = useState<ApiInvestor | null>(null)
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(null)
 
   // API Queries
@@ -481,6 +156,21 @@ export default function InvestorsPage() {
 
   const handleCloseDetailsDialog = () => {
     setDetailsDialogOpen(false)
+    setSelectedInvestorId(null)
+  }
+
+  const handlePayInvestor = (investor: ApiInvestor) => {
+    setSelectedInvestorId(investor.id)
+    setPayDialogOpen(true)
+  }
+
+  const handleOpenPayFromSummary = () => {
+    setDetailsDialogOpen(false)
+    setPayDialogOpen(true)
+  }
+
+  const handleClosePayDialog = () => {
+    setPayDialogOpen(false)
     setSelectedInvestorId(null)
   }
 
@@ -714,6 +404,7 @@ export default function InvestorsPage() {
                   onToggleStatus={handleToggleStatus}
                   isLoading={isLoadingInvestors}
                   onViewDetails={handleViewDetails}
+                  onPay={handlePayInvestor}
                 />
               </CardContent>
             </Card>
@@ -729,10 +420,18 @@ export default function InvestorsPage() {
           isLoading={isCreating || isUpdating}
         />
 
-        {/* Investor Details Dialog */}
-        <InvestorDetailsDialog
+        {/* Investor Due Summary Dialog */}
+        <InvestorDueSummaryDialog
           isOpen={detailsDialogOpen}
           onClose={handleCloseDetailsDialog}
+          investorId={selectedInvestorId}
+          onOpenPayDialog={handleOpenPayFromSummary}
+        />
+
+        {/* Pay Investor Dialog */}
+        <PayInvestorDialog
+          isOpen={payDialogOpen}
+          onClose={handleClosePayDialog}
           investorId={selectedInvestorId}
         />
       </div>

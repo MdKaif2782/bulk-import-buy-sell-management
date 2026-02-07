@@ -1,9 +1,15 @@
 import { format } from 'date-fns';
-import { Edit, Trash2, BadgeDollarSign, Mail, Phone, Building } from 'lucide-react';
+import { Edit, Trash2, BadgeDollarSign, Mail, Phone, Building, Banknote, History, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Employee } from '@/types/employee';
 
 interface EmployeeTableProps {
@@ -12,6 +18,8 @@ interface EmployeeTableProps {
   onEditEmployee: (employee: Employee) => void;
   onPaySalary: (employee: Employee) => void;
   onDeleteEmployee: (id: string) => void;
+  onGiveAdvance?: (employee: Employee) => void;
+  onViewAdvanceHistory?: (employee: Employee) => void;
 }
 
 export function EmployeeTable({ 
@@ -19,7 +27,9 @@ export function EmployeeTable({
   searchTerm, 
   onEditEmployee, 
   onPaySalary, 
-  onDeleteEmployee 
+  onDeleteEmployee,
+  onGiveAdvance,
+  onViewAdvanceHistory,
 }: EmployeeTableProps) {
   return (
     <Card>
@@ -37,6 +47,7 @@ export function EmployeeTable({
               <TableHead>Contact</TableHead>
               <TableHead>Designation</TableHead>
               <TableHead>Salary</TableHead>
+              <TableHead>Advance</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Join Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -93,35 +104,65 @@ export function EmployeeTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <Wallet className="w-3 h-3 text-muted-foreground" />
+                    <span className={`font-medium text-sm ${(employee.advanceBalance ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {(employee.advanceBalance ?? 0).toLocaleString('en-BD')} BDT
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
                   {format(new Date(employee.joinDate), 'MMM dd, yyyy')}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onEditEmployee(employee)}
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onPaySalary(employee)}
-                    >
-                      <BadgeDollarSign className="w-3 h-3 mr-1" />
-                      Pay
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onDeleteEmployee(employee.id)}
-                    >
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
+                  <TooltipProvider>
+                    <div className="flex justify-end space-x-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => onEditEmployee(employee)}>
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => onPaySalary(employee)}>
+                            <BadgeDollarSign className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Pay Salary</TooltipContent>
+                      </Tooltip>
+                      {onGiveAdvance && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="outline" onClick={() => onGiveAdvance(employee)}>
+                              <Banknote className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Give Advance</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {onViewAdvanceHistory && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="outline" onClick={() => onViewAdvanceHistory(employee)}>
+                              <History className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Advance History</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => onDeleteEmployee(employee.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </TableCell>
               </TableRow>
             ))}

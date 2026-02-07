@@ -23,7 +23,7 @@ import type {
   CreateEmployeeRequest, 
   UpdateEmployeeRequest,
   CreateSalaryRequest,
-  PaySalaryRequest
+  Salary,
 } from '@/types/employee';
 
 // Components
@@ -33,6 +33,10 @@ import { EmployeeTable } from '@/components/EmployeeTable';
 import { PayablesSection } from '@/components/PayablesSection';
 import { StatisticsSection } from '@/components/StatisticsSection';
 import { UnpaidSalariesTable } from '@/components/UnpaidSalariesTable';
+import { AdvanceOverviewSection } from '@/components/advance-overview-section';
+import { GiveAdvanceDialog } from '@/components/give-advance-dialog';
+import { AdvanceHistoryDialog } from '@/components/advance-history-dialog';
+import { PaySalaryDialog } from '@/components/pay-salary-dialog';
 
 export default function EmployeePage() {
   // API Hooks
@@ -44,7 +48,7 @@ export default function EmployeePage() {
   const [updateEmployee] = useUpdateEmployeeMutation();
   const [deleteEmployee] = useDeleteEmployeeMutation();
   const [createSalary] = useCreateSalaryMutation();
-  const [paySalary, { isLoading: isPayingSalary }] = usePaySalaryMutation();
+  const [, { isLoading: isPayingSalary }] = usePaySalaryMutation();
   const [generateMonthlySalaries, { isLoading: isGenerating }] = useGenerateMonthlySalariesMutation();
 
   // State
@@ -53,6 +57,17 @@ export default function EmployeePage() {
   const [showSalaryForm, setShowSalaryForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
+  // Advance dialog state
+  const [advanceEmployee, setAdvanceEmployee] = useState<Employee | null>(null);
+  const [showGiveAdvance, setShowGiveAdvance] = useState(false);
+  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
+  const [showAdvanceHistory, setShowAdvanceHistory] = useState(false);
+
+  // Pay salary dialog state
+  const [paySalaryDialogOpen, setPaySalaryDialogOpen] = useState(false);
+  const [paySalaryEmployee, setPaySalaryEmployee] = useState<Employee | null>(null);
+  const [paySalarySalary, setPaySalarySalary] = useState<Salary | null>(null);
 
   // Filter employees based on search
   const filteredEmployees = employees?.filter(employee =>
@@ -103,7 +118,7 @@ export default function EmployeePage() {
 
   const handlePaySalary = async (data: CreateSalaryRequest & { paidDate: string }) => {
     try {
-      // First create the salary record
+      // First create the salary record, then open pay dialog
       await createSalary({
         employeeId: data.employeeId,
         month: data.month,
@@ -113,37 +128,63 @@ export default function EmployeePage() {
         deductions: data.deductions,
       }).unwrap();
 
-      // Then mark it as paid
-      await paySalary({
-        employeeId: data.employeeId,
-        month: data.month,
-        year: data.year,
-        paidDate: data.paidDate,
-      }).unwrap();
+      // Find the employee to open the pay dialog
+      const emp = employees?.find(e => e.id === data.employeeId);
+      if (emp) {
+        setPaySalaryEmployee(emp);
+        setPaySalarySalary({ month: data.month, year: data.year } as Salary);
+        setPaySalaryDialogOpen(true);
+      }
 
-      toast.success('Salary processed successfully');
       setShowSalaryForm(false);
       setSelectedEmployee(null);
-      refetch();
     } catch (error: any) {
       console.error('Failed to process salary:', error);
       toast.error(error?.data?.message || 'Failed to process salary');
     }
   };
 
-  // NEW: Direct payment for unpaid salaries
-  const handlePayUnpaidSalary = async (payData: PaySalaryRequest) => {
-    try {
-      await paySalary(payData).unwrap();
-      toast.success('Salary paid successfully');
-      refetch();
-    } catch (error: any) {
-      console.error('Failed to pay salary:', error);
-      toast.error(error?.data?.message || 'Failed to pay salary');
+  // Pay unpaid salary → open pay dialog
+  const handlePayUnpaidSalary = (salary: Salary) => {
+    const emp = employees?.find(e => e.id === salary.employeeId);
+    if (emp) {
+      setPaySalaryEmployee(emp);
+      setPaySalarySalary(salary);
+      setPaySalaryDialogOpen(true);
     }
   };
 
-  // NEW: Generate monthly salaries
+  // Pay salary from employee table → open pay dialog
+  const handlePaySalaryFromTable = (employee: Employee) => {
+    setPaySalaryEmployee(employee);
+    setPaySalarySalary(null); // current month
+    setPaySalaryDialogOpen(true);
+  };
+
+  // Give advance handlers
+  const handleGiveAdvance = (employee: Employee | { id: string; name: string; advanceBalance: number }) => {
+    // If it's a full Employee object, use directly; otherwise create a minimal one
+    if ('email' in employee) {
+      setAdvanceEmployee(employee as Employee);
+    } else {
+      // Find full employee from the list
+      const fullEmp = employees?.find(e => e.id === employee.id);
+      setAdvanceEmployee(fullEmp ?? null);
+    }
+    setShowGiveAdvance(true);
+  };
+
+  const handleViewAdvanceHistory = (employee: Employee | { id: string; name: string; advanceBalance: number }) => {
+    if ('email' in employee) {
+      setHistoryEmployee(employee as Employee);
+    } else {
+      const fullEmp = employees?.find(e => e.id === employee.id);
+      setHistoryEmployee(fullEmp ?? null);
+    }
+    setShowAdvanceHistory(true);
+  };
+
+  // Generate monthly salaries
   const handleGenerateMonthlySalaries = async () => {
     if (!confirm('Generate monthly salary records for all active employees? This will create PENDING salary entries for the current month.')) {
       return;
@@ -219,7 +260,7 @@ export default function EmployeePage() {
           {/* Statistics Section */}
           {statistics && <StatisticsSection statistics={statistics} />}
 
-          {/* Unpaid Salaries Table - NEW SECTION */}
+          {/* Unpaid Salaries Table */}
           {payables?.unpaid && payables.unpaid.length > 0 && (
             <UnpaidSalariesTable
               unpaidSalaries={payables.unpaid}
@@ -227,6 +268,12 @@ export default function EmployeePage() {
               isPaying={isPayingSalary}
             />
           )}
+
+          {/* Advance Overview Section */}
+          <AdvanceOverviewSection
+            onGiveAdvance={handleGiveAdvance}
+            onViewHistory={handleViewAdvanceHistory}
+          />
 
           {/* Search Bar */}
           <Card>
@@ -263,7 +310,7 @@ export default function EmployeePage() {
             />
           )}
 
-          {/* Salary Payment Form */}
+          {/* Salary Payment Form (create salary record) */}
           {showSalaryForm && selectedEmployee && (
             <SalaryPaymentForm
               employee={selectedEmployee}
@@ -280,14 +327,47 @@ export default function EmployeePage() {
             employees={filteredEmployees || []}
             searchTerm={searchTerm}
             onEditEmployee={setEditingEmployee}
-            onPaySalary={(employee) => {
-              setSelectedEmployee(employee);
-              setShowSalaryForm(true);
-            }}
+            onPaySalary={handlePaySalaryFromTable}
             onDeleteEmployee={handleDeleteEmployee}
+            onGiveAdvance={handleGiveAdvance}
+            onViewAdvanceHistory={handleViewAdvanceHistory}
           />
         </div>
       </div>
+
+      {/* ── Dialogs ── */}
+
+      {/* Pay Salary Dialog (with advance deduction) */}
+      <PaySalaryDialog
+        isOpen={paySalaryDialogOpen}
+        onClose={() => {
+          setPaySalaryDialogOpen(false);
+          setPaySalaryEmployee(null);
+          setPaySalarySalary(null);
+        }}
+        employee={paySalaryEmployee}
+        salary={paySalarySalary}
+      />
+
+      {/* Give Advance Dialog */}
+      <GiveAdvanceDialog
+        isOpen={showGiveAdvance}
+        onClose={() => {
+          setShowGiveAdvance(false);
+          setAdvanceEmployee(null);
+        }}
+        employee={advanceEmployee}
+      />
+
+      {/* Advance History Dialog */}
+      <AdvanceHistoryDialog
+        isOpen={showAdvanceHistory}
+        onClose={() => {
+          setShowAdvanceHistory(false);
+          setHistoryEmployee(null);
+        }}
+        employee={historyEmployee}
+      />
     </div>
   );
 }

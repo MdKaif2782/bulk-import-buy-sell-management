@@ -60,7 +60,7 @@ export function SalesChart() {
           <p className="font-medium">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }}>
-              {entry.name}: ৳{entry.value.toLocaleString("en-BD")}
+              {entry.name}: ৳{(entry.value ?? 0).toLocaleString("en-BD")}
             </p>
           ))}
         </div>
@@ -112,19 +112,19 @@ export function SalesChart() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Total Sales</p>
             <p className="text-lg font-semibold">
-              ৳{chartData.totalSales?.toLocaleString("en-BD")}
+              ৳{(chartData.totalSales ?? 0).toLocaleString("en-BD")}
             </p>
           </div>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Corporate</p>
             <p className="text-lg font-semibold text-primary">
-              {chartData.datasets[0]?.data.reduce((a, b) => a + b, 0).toLocaleString("en-BD")}
+              {(chartData.datasets[0]?.data.reduce((a, b) => a + b, 0) ?? 0).toLocaleString("en-BD")}
             </p>
           </div>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Retail</p>
             <p className="text-lg font-semibold text-green-500">
-              {chartData.datasets[1]?.data.reduce((a, b) => a + b, 0).toLocaleString("en-BD")}
+              {(chartData.datasets[1]?.data.reduce((a, b) => a + b, 0) ?? 0).toLocaleString("en-BD")}
             </p>
           </div>
         </div>

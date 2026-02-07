@@ -49,7 +49,7 @@ export function QuickStats() {
     )
   }
 
-  if (error || !stats) {
+  if (error || !stats || !stats.sales || !stats.inventory || !stats.receivables || !stats.investors) {
     return (
       <Card>
         <CardContent className="p-6 text-center">
@@ -64,34 +64,34 @@ export function QuickStats() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <StatCard
         title="Total Sales"
-        value={`৳${stats.sales.totalSales.toLocaleString()}`}
+        value={`৳${(stats.sales.totalSales ?? 0).toLocaleString()}`}
         subtitle="All time revenue"
         icon={TrendingUp}
         trend="+12.5%"
       />
       <StatCard
         title="Net Profit"
-        value={`৳${stats.sales.netProfit.toLocaleString()}`}
-        subtitle={`${stats.sales.profitMargin.toFixed(1)}% margin`}
+        value={`৳${(stats.sales.netProfit ?? 0).toLocaleString()}`}
+        subtitle={`${(stats.sales.profitMargin ?? 0).toFixed(1)}% margin`}
         icon={DollarSign}
         trend="+8.2%"
       />
       <StatCard
         title="Inventory Value"
-        value={`৳${stats.inventory.totalValue.toLocaleString()}`}
-        subtitle={`${stats.inventory.totalItems} items`}
+        value={`৳${(stats.inventory.totalValue ?? 0).toLocaleString()}`}
+        subtitle={`${stats.inventory.totalItems ?? 0} items`}
         icon={Package}
       />
       <StatCard
         title="Receivables"
-        value={`৳${stats.receivables.totalDue.toLocaleString()}`}
-        subtitle={`${stats.receivables.collectionRate.toFixed(1)}% collected`}
+        value={`৳${(stats.receivables.totalDue ?? 0).toLocaleString()}`}
+        subtitle={`${(stats.receivables.collectionRate ?? 0).toFixed(1)}% collected`}
         icon={CreditCard}
       />
       <StatCard
         title="Active Investors"
-        value={stats.investors.activeInvestors.toString()}
-        subtitle={`৳${stats.investors.totalInvestment.toLocaleString()} invested`}
+        value={(stats.investors.activeInvestors ?? 0).toString()}
+        subtitle={`৳${(stats.investors.totalInvestment ?? 0).toLocaleString()} invested`}
         icon={Users}
       />
     </div>

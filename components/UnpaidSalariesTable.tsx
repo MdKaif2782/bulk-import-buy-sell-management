@@ -1,31 +1,20 @@
 import { format } from 'date-fns';
-import { DollarSign, Calendar, User, BadgeDollarSign } from 'lucide-react';
+import { DollarSign, Calendar, User, BadgeDollarSign, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Salary, PaySalaryRequest } from '@/types/employee';
+import type { Salary } from '@/types/employee';
 
 interface UnpaidSalariesTableProps {
   unpaidSalaries: Salary[];
-  onPaySalary: (payrollData: PaySalaryRequest) => void;
+  onPaySalary: (salary: Salary) => void;
   isPaying?: boolean;
 }
 
 export function UnpaidSalariesTable({ unpaidSalaries, onPaySalary, isPaying = false }: UnpaidSalariesTableProps) {
   const handlePayNow = (salary: Salary) => {
-    if (!confirm(`Pay ${salary.employee?.name} - ${salary.netSalary.toFixed(2)} BDT for ${format(new Date(salary.year, salary.month - 1), 'MMMM yyyy')}?`)) {
-      return;
-    }
-
-    const payData: PaySalaryRequest = {
-      employeeId: salary.employeeId,
-      month: salary.month,
-      year: salary.year,
-      paidDate: new Date().toISOString(),
-    };
-
-    onPaySalary(payData);
+    onPaySalary(salary);
   };
 
   const totalUnpaid = unpaidSalaries.reduce((sum, salary) => sum + salary.netSalary, 0);
@@ -48,7 +37,8 @@ export function UnpaidSalariesTable({ unpaidSalaries, onPaySalary, isPaying = fa
               <TableHead>Employee</TableHead>
               <TableHead>Designation</TableHead>
               <TableHead>Period</TableHead>
-              <TableHead>Net Salary</TableHead>
+              <TableHead>Gross Salary</TableHead>
+              <TableHead>Advance Bal.</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
@@ -84,8 +74,20 @@ export function UnpaidSalariesTable({ unpaidSalaries, onPaySalary, isPaying = fa
                 </TableCell>
                 <TableCell>
                   <div className="font-bold text-destructive">
-                    {salary.netSalary.toFixed(2)} BDT
+                    {(salary.grossSalary ?? salary.netSalary).toFixed(2)} BDT
                   </div>
+                </TableCell>
+                <TableCell>
+                  {(salary as any).employee?.advanceBalance != null && (salary as any).employee.advanceBalance > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <Wallet className="w-3 h-3 text-orange-500" />
+                      <span className="text-sm font-medium text-orange-600">
+                        {(salary as any).employee.advanceBalance.toLocaleString('en-BD')} BDT
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">

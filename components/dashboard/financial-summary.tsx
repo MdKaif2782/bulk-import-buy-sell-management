@@ -32,33 +32,39 @@ export function FinancialSummary() {
 
   const { financialSummary } = dashboardData;
 
+  const totalRevenue = financialSummary.totalRevenue ?? 0;
+  const netProfit = financialSummary.netProfit ?? 0;
+  const profitMargin = financialSummary.profitMargin ?? 0;
+  const expenseGrowth = financialSummary.expenseGrowth ?? 0;
+  const revenueGrowth = financialSummary.revenueGrowth ?? 0;
+
   const metrics = [
     {
       label: "Total Revenue",
-      value: `৳${financialSummary.totalRevenue.toLocaleString("en-BD")}`,
-      growth: financialSummary.revenueGrowth,
-      trend: financialSummary.revenueGrowth >= 0 ? "up" : financialSummary.revenueGrowth < 0 ? "down" : "stable",
+      value: `৳${totalRevenue.toLocaleString("en-BD")}`,
+      growth: revenueGrowth,
+      trend: revenueGrowth >= 0 ? "up" : revenueGrowth < 0 ? "down" : "stable",
       icon: TrendingUp,
     },
     {
       label: "Net Profit",
-      value: `৳${financialSummary.netProfit.toLocaleString("en-BD")}`,
-      growth: ((financialSummary.netProfit / financialSummary.totalRevenue) * 100) || 0,
-      trend: financialSummary.netProfit >= 0 ? "up" : "down",
+      value: `৳${netProfit.toLocaleString("en-BD")}`,
+      growth: totalRevenue ? ((netProfit / totalRevenue) * 100) : 0,
+      trend: netProfit >= 0 ? "up" : "down",
       icon: TrendingUp,
     },
     {
       label: "Profit Margin",
-      value: `${financialSummary.profitMargin.toFixed(1)}%`,
-      growth: financialSummary.profitMargin,
-      trend: financialSummary.profitMargin >= 20 ? "up" : financialSummary.profitMargin >= 10 ? "stable" : "down",
+      value: `${profitMargin.toFixed(1)}%`,
+      growth: profitMargin,
+      trend: profitMargin >= 20 ? "up" : profitMargin >= 10 ? "stable" : "down",
       icon: BarChart3,
     },
     {
       label: "Expense Growth",
-      value: `${financialSummary.expenseGrowth.toFixed(1)}%`,
-      growth: financialSummary.expenseGrowth,
-      trend: financialSummary.expenseGrowth <= 5 ? "down" : financialSummary.expenseGrowth <= 15 ? "stable" : "up",
+      value: `${expenseGrowth.toFixed(1)}%`,
+      growth: expenseGrowth,
+      trend: expenseGrowth <= 5 ? "down" : expenseGrowth <= 15 ? "stable" : "up",
       icon: TrendingDown,
     },
   ];
@@ -96,15 +102,15 @@ export function FinancialSummary() {
               </div>
               <p
                 className={`text-xs mt-1 ${
-                  metric.growth > 0
+                  (metric.growth ?? 0) > 0
                     ? "text-green-500"
-                    : metric.growth < 0
+                    : (metric.growth ?? 0) < 0
                     ? "text-red-500"
                     : "text-gray-500"
                 }`}
               >
-                {metric.growth > 0 ? "+" : ""}
-                {metric.growth.toFixed(1)}%
+                {(metric.growth ?? 0) > 0 ? "+" : ""}
+                {(metric.growth ?? 0).toFixed(1)}%
               </p>
             </div>
           ))}
@@ -114,19 +120,19 @@ export function FinancialSummary() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Gross Profit</p>
             <p className="text-lg font-semibold text-green-600">
-              ৳{financialSummary.grossProfit.toLocaleString("en-BD")}
+              ৳{(financialSummary.grossProfit ?? 0).toLocaleString("en-BD")}
             </p>
           </div>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Total Expenses</p>
             <p className="text-lg font-semibold text-orange-600">
-              ৳{financialSummary.totalExpenses.toLocaleString("en-BD")}
+              ৳{(financialSummary.totalExpenses ?? 0).toLocaleString("en-BD")}
             </p>
           </div>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Operating Margin</p>
             <p className="text-lg font-semibold text-blue-600">
-              {((financialSummary.grossProfit / financialSummary.totalRevenue) * 100).toFixed(1)}%
+              {(totalRevenue ? ((financialSummary.grossProfit ?? 0) / totalRevenue) * 100 : 0).toFixed(1)}%
             </p>
           </div>
         </div>

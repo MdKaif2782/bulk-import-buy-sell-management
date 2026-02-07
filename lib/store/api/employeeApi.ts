@@ -12,6 +12,13 @@ import {
   PayablesRequest,
   StatisticsRequest,
   TrendsRequest,
+  GiveAdvanceRequest,
+  GiveAdvanceResponse,
+  AdjustAdvanceRequest,
+  AdvanceHistoryResponse,
+  AdvanceOverviewResponse,
+  SalaryPreviewResponse,
+  PaySalaryResponse,
 } from '@/types/employee';
 
 // Define the response wrapper type
@@ -110,14 +117,14 @@ export const employeeApi = baseApi.injectEndpoints({
       invalidatesTags: ['Salary', 'Payables', 'Statistics'],
     }),
 
-    paySalary: builder.mutation<Salary, PaySalaryRequest>({
+    paySalary: builder.mutation<PaySalaryResponse, PaySalaryRequest>({
       query: (body) => ({
         url: '/employees/salaries/pay',
         method: 'POST',
         body,
       }),
-      transformResponse: (response: ApiResponse<Salary>) => response.data,
-      invalidatesTags: ['Salary', 'Payables', 'Statistics'],
+      transformResponse: (response: ApiResponse<PaySalaryResponse>) => response.data,
+      invalidatesTags: ['Salary', 'Payables', 'Statistics', 'Advance', 'Employee'],
     }),
 
     // NEW MUTATION: Generate Monthly Salaries
@@ -178,6 +185,48 @@ export const employeeApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<TrendsResponse>) => response.data,
       providesTags: ['Statistics'],
     }),
+
+    // ==================== Advance Endpoints ====================
+
+    giveAdvance: builder.mutation<GiveAdvanceResponse, { id: string; data: GiveAdvanceRequest }>({
+      query: ({ id, data }) => ({
+        url: `/employees/${id}/advance`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: ApiResponse<GiveAdvanceResponse>) => response.data,
+      invalidatesTags: ['Advance', 'Employee'],
+    }),
+
+    adjustAdvance: builder.mutation<GiveAdvanceResponse, { id: string; data: AdjustAdvanceRequest }>({
+      query: ({ id, data }) => ({
+        url: `/employees/${id}/advance/adjust`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: ApiResponse<GiveAdvanceResponse>) => response.data,
+      invalidatesTags: ['Advance', 'Employee'],
+    }),
+
+    getAdvanceHistory: builder.query<AdvanceHistoryResponse, { id: string; page?: number; limit?: number }>({
+      query: ({ id, page = 1, limit = 20 }) =>
+        `/employees/${id}/advances?page=${page}&limit=${limit}`,
+      transformResponse: (response: ApiResponse<AdvanceHistoryResponse>) => response.data,
+      providesTags: ['Advance'],
+    }),
+
+    getAdvanceOverview: builder.query<AdvanceOverviewResponse, void>({
+      query: () => '/employees/advances/overview',
+      transformResponse: (response: ApiResponse<AdvanceOverviewResponse>) => response.data,
+      providesTags: ['Advance'],
+    }),
+
+    getSalaryPreview: builder.query<SalaryPreviewResponse, { id: string; month: number; year: number }>({
+      query: ({ id, month, year }) =>
+        `/employees/${id}/salary-preview?month=${month}&year=${year}`,
+      transformResponse: (response: ApiResponse<SalaryPreviewResponse>) => response.data,
+      providesTags: ['Salary', 'Advance'],
+    }),
   }),
 });
 
@@ -195,4 +244,10 @@ export const {
   useGetPayablesQuery,
   useGetSalaryStatisticsQuery,
   useGetMonthlyTrendsQuery,
+  // Advance hooks
+  useGiveAdvanceMutation,
+  useAdjustAdvanceMutation,
+  useGetAdvanceHistoryQuery,
+  useGetAdvanceOverviewQuery,
+  useGetSalaryPreviewQuery,
 } = employeeApi;

@@ -60,8 +60,8 @@ export function ExpenseChart() {
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{payload[0].name}</p>
-          <p>৳{payload[0].value.toLocaleString("en-BD")}</p>
-          <p>{payload[0].payload.percentage?.toFixed(1)}%</p>
+          <p>৳{(payload[0].value ?? 0).toLocaleString("en-BD")}</p>
+          <p>{(payload[0].payload.percentage ?? 0).toFixed(1)}%</p>
         </div>
       );
     }
@@ -119,10 +119,10 @@ export function ExpenseChart() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium">
-                    ৳{category.amount.toLocaleString("en-BD")}
+                    ৳{(category.amount ?? 0).toLocaleString("en-BD")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {category.percentage.toFixed(1)}%
+                    {(category.percentage ?? 0).toFixed(1)}%
                   </p>
                 </div>
               </div>
@@ -132,7 +132,7 @@ export function ExpenseChart() {
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total Expenses</span>
                 <span className="text-lg font-bold text-destructive">
-                  ৳{categoryBreakdown.reduce((sum, cat) => sum + cat.amount, 0).toLocaleString("en-BD")}
+                  ৳{categoryBreakdown.reduce((sum, cat) => sum + (cat.amount ?? 0), 0).toLocaleString("en-BD")}
                 </span>
               </div>
             </div>

@@ -55,37 +55,37 @@ export function BusinessHealth() {
   const metrics = [
     {
       label: "Profitability Index",
-      value: businessHealth.profitabilityIndex.toFixed(2),
+      value: (businessHealth.profitabilityIndex ?? 0).toFixed(2),
       description: "Higher is better",
       icon: TrendingUp,
     },
     {
       label: "Operating Margin",
-      value: `${businessHealth.operatingMargin.toFixed(1)}%`,
+      value: `${(businessHealth.operatingMargin ?? 0).toFixed(1)}%`,
       description: "Industry avg: 15%",
       icon: BarChart3,
     },
     {
       label: "Inventory Turnover",
-      value: businessHealth.inventoryTurnover.toFixed(1),
+      value: (businessHealth.inventoryTurnover ?? 0).toFixed(1),
       description: "Times per year",
       icon: Package,
     },
     {
       label: "Current Ratio",
-      value: businessHealth.currentRatio.toFixed(1),
+      value: (businessHealth.currentRatio ?? 0).toFixed(1),
       description: "Ideal: 1.5-2.0",
       icon: DollarSign,
     },
     {
       label: "Quick Ratio",
-      value: businessHealth.quickRatio.toFixed(1),
+      value: (businessHealth.quickRatio ?? 0).toFixed(1),
       description: "Ideal: 1.0-1.5",
       icon: Zap,
     },
     {
       label: "Cash Flow",
-      value: `৳${businessHealth.cashFlow.toLocaleString("en-BD")}`,
+      value: `৳${(businessHealth.cashFlow ?? 0).toLocaleString("en-BD")}`,
       description: "Monthly",
       icon: DollarSign,
     },
@@ -101,13 +101,13 @@ export function BusinessHealth() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             {getHealthIcon(businessHealth.status)}
-            <span className={`text-3xl font-bold ${getHealthColor(businessHealth.healthScore)}`}>
-              {businessHealth.healthScore.toFixed(0)}
+            <span className={`text-3xl font-bold ${getHealthColor(businessHealth.healthScore ?? 0)}`}>
+              {(businessHealth.healthScore ?? 0).toFixed(0)}
             </span>
             <span className="text-muted-foreground">/100</span>
           </div>
           <Progress 
-            value={businessHealth.healthScore} 
+            value={businessHealth.healthScore ?? 0} 
             className="h-2"
           />
           <p className="text-sm text-muted-foreground mt-2 capitalize">
