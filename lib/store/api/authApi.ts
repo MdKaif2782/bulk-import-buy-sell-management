@@ -3,6 +3,7 @@ import { setCredentials, logOut, updateTokens } from '../slices/authSlice'
 
 const baseQuery = fetchBaseQuery({
   baseUrl: 'https://genuine.inovate.it.com/api/auth',
+  //baseUrl: 'http://localhost:2000/api/auth',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as any).auth.accessToken
     if (token) {
