@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ExpenseCategory, PaymentMethod, ExpenseStatus, type UpdateExpenseRequest } from '@/types/expense';
+import { ExpenseCategory, PaymentMethod, ExpenseStatus, expenseCategoryLabels, manualExpenseCategories, type UpdateExpenseRequest } from '@/types/expense';
 import { useUpdateExpenseMutation } from '@/lib/store/api/expenseApi';
 
 interface EditExpenseSheetProps {
@@ -20,7 +20,7 @@ export default function EditExpenseSheet({ open, onOpenChange, expense, onSucces
     title: '',
     description: '',
     amount: 0,
-    category: ExpenseCategory.OTHER,
+    category: ExpenseCategory.MISCELLANEOUS,
     expenseDate: new Date().toISOString(),
     paymentMethod: PaymentMethod.CASH,
     status: ExpenseStatus.PENDING,
@@ -116,9 +116,9 @@ export default function EditExpenseSheet({ open, onOpenChange, expense, onSucces
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ExpenseCategory).map((category) => (
+                  {manualExpenseCategories.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category.replace('_', ' ')}
+                      {expenseCategoryLabels[category] || category.replace(/_/g, ' ')}
                     </SelectItem>
                   ))}
                 </SelectContent>

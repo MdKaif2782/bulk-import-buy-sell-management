@@ -46,7 +46,7 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
               </div>
               <div>
                 <p className="text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold">৳{summary.totalInventoryValue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">৳{(summary.totalInventoryValue ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Low Stock Items</p>
@@ -54,7 +54,7 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
               </div>
               <div>
                 <p className="text-muted-foreground">Expected Sale Value</p>
-                <p className="text-2xl font-bold text-green-600">৳{summary.totalExpectedSaleValue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">৳{(summary.totalExpectedSaleValue ?? 0).toLocaleString()}</p>
               </div>
             </div>
           ) : null}
@@ -95,17 +95,17 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
                 </div>
                 <div className="flex justify-between">
                   <span>Inventory Value</span>
-                  <span className="font-semibold">৳{summary.totalInventoryValue.toLocaleString()}</span>
+                  <span className="font-semibold">৳{(summary.totalInventoryValue ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Expected Sale Value</span>
                   <span className="font-semibold text-green-600">
-                    ৳{summary.totalExpectedSaleValue.toLocaleString()}
+                    ৳{(summary.totalExpectedSaleValue ?? 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Average Stock Value</span>
-                  <span className="font-semibold">৳{summary.averageStockValue.toLocaleString()}</span>
+                  <span className="font-semibold">৳{(summary.averageStockValue ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-orange-600">Low Stock Items</span>
@@ -143,11 +143,11 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
                   {companyStock.map((company) => (
                     <TableRow key={company.companyName}>
                       <TableCell className="font-medium">{company.companyName}</TableCell>
-                      <TableCell>৳{company.stockValue.toLocaleString()}</TableCell>
+                      <TableCell>৳{(company.stockValue ?? 0).toLocaleString()}</TableCell>
                       <TableCell>{company.itemCount}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {company.percentageOfTotal.toFixed(1)}%
+                          {(company.percentageOfTotal ?? 0).toFixed(1)}%
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -198,8 +198,8 @@ export function InventoryReports({ preview = false }: InventoryReportsProps) {
                         </Badge>
                       </TableCell>
                       <TableCell>{item.minStockLevel || 10}</TableCell>
-                      <TableCell>৳{item.purchasePrice.toLocaleString()}</TableCell>
-                      <TableCell>৳{item.expectedSalePrice.toLocaleString()}</TableCell>
+                      <TableCell>৳{(item.purchasePrice ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>৳{(item.expectedSalePrice ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={
                           item.currentQuantity === 0 ? "destructive" : 

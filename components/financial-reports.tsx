@@ -57,19 +57,19 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Billed</p>
-                <p className="text-2xl font-bold">৳{billing.totalBilledAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold">৳{(billing.totalBilledAmount ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Total Due</p>
-                <p className="text-2xl font-bold text-orange-600">৳{billing.totalDue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-orange-600">৳{(billing.totalDue ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Collection Rate</p>
-                <p className="text-2xl font-bold text-green-600">{billing.collectionRate.toFixed(1)}%</p>
+                <p className="text-2xl font-bold text-green-600">{(billing.collectionRate ?? 0).toFixed(1)}%</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Total Bills</p>
-                <p className="text-2xl font-bold">{billing.totalBills}</p>
+                <p className="text-2xl font-bold">{billing.totalBills ?? 0}</p>
               </div>
             </div>
           ) : null}
@@ -107,23 +107,23 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Total Billed Amount</p>
-                    <p className="text-2xl font-bold">৳{billing.totalBilledAmount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">৳{(billing.totalBilledAmount ?? 0).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Total Collected</p>
                     <p className="text-2xl font-bold text-green-600">
-                      ৳{billing.totalCollected.toLocaleString()}
+                      ৳{(billing.totalCollected ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Total Due</p>
                     <p className="text-2xl font-bold text-orange-600">
-                      ৳{billing.totalDue.toLocaleString()}
+                      ৳{(billing.totalDue ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Collection Rate</p>
-                    <p className="text-2xl font-bold">{billing.collectionRate.toFixed(1)}%</p>
+                    <p className="text-2xl font-bold">{(billing.collectionRate ?? 0).toFixed(1)}%</p>
                   </div>
                 </div>
                 
@@ -132,19 +132,19 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex justify-between">
                       <span>Pending</span>
-                      <Badge variant="secondary">{billing.billsByStatus.pending}</Badge>
+                      <Badge variant="secondary">{billing.billsByStatus?.pending ?? 0}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Partially Paid</span>
-                      <Badge variant="default">{billing.billsByStatus.partiallyPaid}</Badge>
+                      <Badge variant="default">{billing.billsByStatus?.partiallyPaid ?? 0}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Paid</span>
-                      <Badge variant="success">{billing.billsByStatus.paid}</Badge>
+                      <Badge variant="success">{billing.billsByStatus?.paid ?? 0}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Overdue</span>
-                      <Badge variant="destructive">{billing.billsByStatus.overdue}</Badge>
+                      <Badge variant="destructive">{billing.billsByStatus?.overdue ?? 0}</Badge>
                     </div>
                   </div>
                 </div>
@@ -173,18 +173,18 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
               <div className="space-y-4">
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-orange-600">
-                    ৳{aging.totalReceivable.toLocaleString()}
+                    ৳{(aging.totalReceivable ?? 0).toLocaleString()}
                   </p>
                   <p className="text-sm text-muted-foreground">Total Receivable</p>
                 </div>
                 <div className="space-y-2">
-                  {aging.agingBuckets.map((bucket) => (
+                  {(aging.agingBuckets ?? []).map((bucket) => (
                     <div key={bucket.bucket} className="flex justify-between items-center">
                       <span className="text-sm">{bucket.bucket}</span>
                       <div className="text-right">
-                        <p className="font-semibold">৳{bucket.amount.toLocaleString()}</p>
+                        <p className="font-semibold">৳{(bucket.amount ?? 0).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">
-                          {bucket.count} bills • {bucket.percentage.toFixed(1)}%
+                          {bucket.count ?? 0} bills • {(bucket.percentage ?? 0).toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -223,11 +223,11 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
                   {receivables.map((company) => (
                     <TableRow key={company.companyName}>
                       <TableCell className="font-medium">{company.companyName}</TableCell>
-                      <TableCell>৳{company.totalBilled.toLocaleString()}</TableCell>
-                      <TableCell>৳{company.totalCollected.toLocaleString()}</TableCell>
+                      <TableCell>৳{(company.totalBilled ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>৳{(company.totalCollected ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge variant={company.totalDue > 0 ? "destructive" : "success"}>
-                          ৳{company.totalDue.toLocaleString()}
+                        <Badge variant={(company.totalDue ?? 0) > 0 ? "destructive" : "success"}>
+                          ৳{(company.totalDue ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -235,10 +235,10 @@ export function FinancialReports({ preview = false }: FinancialReportsProps) {
                           <div className="w-16 bg-secondary rounded-full h-2">
                             <div 
                               className="bg-green-600 h-2 rounded-full" 
-                              style={{ width: `${company.collectionRate}%` }}
+                              style={{ width: `${company.collectionRate ?? 0}%` }}
                             />
                           </div>
-                          <span className="text-sm">{company.collectionRate.toFixed(1)}%</span>
+                          <span className="text-sm">{(company.collectionRate ?? 0).toFixed(1)}%</span>
                         </div>
                       </TableCell>
                     </TableRow>

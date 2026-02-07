@@ -120,17 +120,17 @@ export function InvestorReports({ preview = false }: InvestorReportsProps) {
                       onClick={() => setSelectedInvestor(investor.investorId)}
                     >
                       <TableCell className="font-medium">{investor.investorName}</TableCell>
-                      <TableCell>৳{investor.totalInvestment.toLocaleString()}</TableCell>
-                      <TableCell>৳{investor.totalProfitEarned.toLocaleString()}</TableCell>
-                      <TableCell>৳{investor.totalPaid.toLocaleString()}</TableCell>
+                      <TableCell>৳{(investor.totalInvestment ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>৳{(investor.totalProfitEarned ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>৳{(investor.totalPaid ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge variant={investor.totalDue > 0 ? "destructive" : "success"}>
-                          ৳{investor.totalDue.toLocaleString()}
+                        <Badge variant={(investor.totalDue ?? 0) > 0 ? "destructive" : "success"}>
+                          ৳{(investor.totalDue ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={investor.overallROI > 0 ? "default" : "secondary"}>
-                          {investor.overallROI.toFixed(1)}%
+                        <Badge variant={(investor.overallROI ?? 0) > 0 ? "default" : "secondary"}>
+                          {(investor.overallROI ?? 0).toFixed(1)}%
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -254,23 +254,23 @@ export function InvestorReports({ preview = false }: InvestorReportsProps) {
                       <TableRow key={investment.investmentId}>
                         <TableCell className="font-medium">{investment.poNumber}</TableCell>
                         <TableCell>{investment.vendorName}</TableCell>
-                        <TableCell>৳{investment.investmentAmount.toLocaleString()}</TableCell>
+                        <TableCell>৳{(investment.investmentAmount ?? 0).toLocaleString()}</TableCell>
                         <TableCell>{investment.profitPercentage}%</TableCell>
-                        <TableCell>৳{investment.totalRevenue.toLocaleString()}</TableCell>
-                        <TableCell>৳{investment.totalCollected.toLocaleString()}</TableCell>
+                        <TableCell>৳{(investment.totalRevenue ?? 0).toLocaleString()}</TableCell>
+                        <TableCell>৳{(investment.totalCollected ?? 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge variant="success">
-                            ৳{investment.profitEarned.toLocaleString()}
+                            ৳{(investment.profitEarned ?? 0).toLocaleString()}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="default">
-                            ৳{investment.payableNow.toLocaleString()}
+                            ৳{(investment.payableNow ?? 0).toLocaleString()}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={investment.roi > 0 ? "default" : "secondary"}>
-                            {investment.roi.toFixed(1)}%
+                          <Badge variant={(investment.roi ?? 0) > 0 ? "default" : "secondary"}>
+                            {(investment.roi ?? 0).toFixed(1)}%
                           </Badge>
                         </TableCell>
                         <TableCell>

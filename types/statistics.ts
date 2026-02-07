@@ -109,19 +109,26 @@ export interface ExpenseBreakdown {
   monthlyTrend: MonthlyExpense[];
 }
 
-export interface DepartmentStats {
-  department: string;
+export interface DesignationStats {
+  designation: string;
   count: number;
   avgSalary: number;
   color: string;
 }
+
+/** @deprecated Use DesignationStats instead */
+export type DepartmentStats = DesignationStats;
 
 export interface EmployeeStats {
   totalEmployees: number;
   activeEmployees: number;
   monthlySalary: number;
   averageSalary: number;
-  byDepartment: DepartmentStats[];
+  byDesignation: DesignationStats[];
+  totalAdvanceOutstanding: number;
+  totalSalaryPaidThisYear: number;
+  /** @deprecated Use byDesignation instead */
+  byDepartment?: DesignationStats[];
 }
 
 export interface BusinessHealth {

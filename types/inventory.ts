@@ -28,6 +28,7 @@ export interface UpdateInventoryRequest {
   minStockLevel?: number;
   maxStockLevel?: number;
   barcode?: string;
+  imageUrl?: string;
 }
 
 export interface InventorySearchParams {

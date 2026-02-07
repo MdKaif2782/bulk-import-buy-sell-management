@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ExpenseCategory, PaymentMethod, ExpenseStatus, type CreateExpenseRequest } from '@/types/expense';
+import { ExpenseCategory, PaymentMethod, ExpenseStatus, expenseCategoryLabels, manualExpenseCategories, type CreateExpenseRequest } from '@/types/expense';
 import { useCreateExpenseMutation } from '@/lib/store/api/expenseApi';
 
 interface CreateExpenseDialogProps {
@@ -19,7 +19,7 @@ export default function CreateExpenseDialog({ open, onOpenChange, onSuccess }: C
     title: '',
     description: '',
     amount: 0,
-    category: ExpenseCategory.OTHER,
+    category: ExpenseCategory.MISCELLANEOUS,
     expenseDate: new Date().toISOString(),
     paymentMethod: PaymentMethod.CASH,
     status: ExpenseStatus.PENDING,
@@ -36,7 +36,7 @@ export default function CreateExpenseDialog({ open, onOpenChange, onSuccess }: C
         title: '',
         description: '',
         amount: 0,
-        category: ExpenseCategory.OTHER,
+        category: ExpenseCategory.MISCELLANEOUS,
         expenseDate: new Date().toISOString(),
         paymentMethod: PaymentMethod.CASH,
         status: ExpenseStatus.PENDING,
@@ -105,9 +105,9 @@ export default function CreateExpenseDialog({ open, onOpenChange, onSuccess }: C
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(ExpenseCategory).map((category) => (
+                    {manualExpenseCategories.map((category) => (
                       <SelectItem key={category} value={category}>
-                        {category.replace('_', ' ')}
+                        {expenseCategoryLabels[category] || category.replace(/_/g, ' ')}
                       </SelectItem>
                     ))}
                   </SelectContent>

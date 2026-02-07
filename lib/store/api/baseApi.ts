@@ -81,6 +81,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
+  refetchOnMountOrArgChange: 30,
   tagTypes: [
     'User',
     'Product',
@@ -90,7 +91,28 @@ export const baseApi = createApi({
     'Investor',
     'Quotation',
     'Challan',
-    'Report'
+    'Report',
+    'Inventory',
+    'Employee',
+    'Salary',
+    'Payables',
+    'Statistics',
+    'Advance',
+    'DashboardStats',
+    'SalesChart',
+    'ExpenseChart',
+    'InventoryChart',
+    'QuickStats',
+    'RetailSale',
+    'Order',
+    'OrderSummary',
+    'OrderStatistics',
   ],
-  endpoints: () => ({}),
+  endpoints: (builder) => ({
+    testAuth: builder.query<any, void>({
+      query: () => '/auth/test',
+    }),
+  }),
 })
+
+export const { useLazyTestAuthQuery } = baseApi

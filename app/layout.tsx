@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/components/language-provider"
 import { Toaster } from "@/components/ui/sonner"
 import StoreProvider from "./providers/StoreProvider"
+import { AuthGuard } from "@/components/AuthGuard"
 
 import { Poppins } from "next/font/google"
 
@@ -28,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased`} suppressHydrationWarning>
         <StoreProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <Toaster
@@ -37,7 +38,9 @@ export default function RootLayout({
               richColors
               closeButton
             />
-            <LanguageProvider>{children}</LanguageProvider>
+            <LanguageProvider>
+              <AuthGuard>{children}</AuthGuard>
+            </LanguageProvider>
           </ThemeProvider>
         </StoreProvider>
         <Analytics />

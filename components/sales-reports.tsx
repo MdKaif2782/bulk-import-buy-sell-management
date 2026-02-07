@@ -40,19 +40,19 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Sales</p>
-                <p className="text-2xl font-bold">৳{salesSummary.totalSales.toLocaleString()}</p>
+                <p className="text-2xl font-bold">৳{(salesSummary.totalSales ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Net Profit</p>
-                <p className="text-2xl font-bold text-green-600">৳{salesSummary.netProfit.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">৳{(salesSummary.netProfit ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Corporate Sales</p>
-                <p className="text-xl font-semibold">৳{salesSummary.corporateSales.toLocaleString()}</p>
+                <p className="text-xl font-semibold">৳{(salesSummary.corporateSales ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Retail Sales</p>
-                <p className="text-xl font-semibold">৳{salesSummary.retailSales.toLocaleString()}</p>
+                <p className="text-xl font-semibold">৳{(salesSummary.retailSales ?? 0).toLocaleString()}</p>
               </div>
             </div>
           ) : null}
@@ -90,36 +90,36 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Total Sales</p>
-                    <p className="text-2xl font-bold">৳{salesSummary.totalSales.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">৳{(salesSummary.totalSales ?? 0).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Net Profit</p>
                     <p className="text-2xl font-bold text-green-600">
-                      ৳{salesSummary.netProfit.toLocaleString()}
+                      ৳{(salesSummary.netProfit ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Corporate Sales</p>
                     <p className="text-xl font-semibold">
-                      ৳{salesSummary.corporateSales.toLocaleString()}
+                      ৳{(salesSummary.corporateSales ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Retail Sales</p>
                     <p className="text-xl font-semibold">
-                      ৳{salesSummary.retailSales.toLocaleString()}
+                      ৳{(salesSummary.retailSales ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Cost of Goods Sold</p>
                     <p className="text-xl font-semibold">
-                      ৳{salesSummary.cogs.toLocaleString()}
+                      ৳{(salesSummary.cogs ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Gross Profit</p>
                     <p className="text-xl font-semibold text-blue-600">
-                      ৳{salesSummary.grossProfit.toLocaleString()}
+                      ৳{(salesSummary.grossProfit ?? 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -130,13 +130,13 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                     <div className="flex justify-between items-center">
                       <span>Gross Margin</span>
                       <Badge variant="outline" className="text-blue-600">
-                        {salesSummary.grossMargin.toFixed(1)}%
+                        {(salesSummary.grossMargin ?? 0).toFixed(1)}%
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Net Margin</span>
                       <Badge variant="default" className="text-green-600">
-                        {salesSummary.netMargin.toFixed(1)}%
+                        {(salesSummary.netMargin ?? 0).toFixed(1)}%
                       </Badge>
                     </div>
                   </div>
@@ -170,9 +170,9 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                     <span>Corporate</span>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">৳{salesSummary.corporateSales.toLocaleString()}</p>
+                    <p className="font-semibold">৳{(salesSummary.corporateSales ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">
-                      {((salesSummary.corporateSales / salesSummary.totalSales) * 100).toFixed(1)}%
+                      {(salesSummary.totalSales ? (((salesSummary.corporateSales ?? 0) / salesSummary.totalSales) * 100) : 0).toFixed(1)}%
                     </p>
                   </div>
                 </div>
@@ -182,9 +182,9 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                     <span>Retail</span>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">৳{salesSummary.retailSales.toLocaleString()}</p>
+                    <p className="font-semibold">৳{(salesSummary.retailSales ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">
-                      {((salesSummary.retailSales / salesSummary.totalSales) * 100).toFixed(1)}%
+                      {(salesSummary.totalSales ? (((salesSummary.retailSales ?? 0) / salesSummary.totalSales) * 100) : 0).toFixed(1)}%
                     </p>
                   </div>
                 </div>
@@ -193,9 +193,9 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                   <div className="flex justify-between text-sm">
                     <span>Profitability</span>
                     <Badge variant={
-                      salesSummary.netProfit > 0 ? "success" : "destructive"
+                      (salesSummary.netProfit ?? 0) > 0 ? "success" : "destructive"
                     }>
-                      {salesSummary.netProfit > 0 ? "Profitable" : "Loss"}
+                      {(salesSummary.netProfit ?? 0) > 0 ? "Profitable" : "Loss"}
                     </Badge>
                   </div>
                 </div>
@@ -234,22 +234,22 @@ export function SalesReports({ preview = false }: SalesReportsProps) {
                   {periodicSales.map((period) => (
                     <TableRow key={period.period}>
                       <TableCell className="font-medium">{period.period}</TableCell>
-                      <TableCell>৳{period.totalSales.toLocaleString()}</TableCell>
-                      <TableCell>৳{period.cogs.toLocaleString()}</TableCell>
+                      <TableCell>৳{(period.totalSales ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>৳{(period.cogs ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-blue-600">
-                          ৳{period.grossProfit.toLocaleString()}
+                          ৳{(period.grossProfit ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
-                      <TableCell>৳{period.expenses.toLocaleString()}</TableCell>
+                      <TableCell>৳{(period.expenses ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge variant={period.netProfit > 0 ? "success" : "destructive"}>
-                          ৳{period.netProfit.toLocaleString()}
+                        <Badge variant={(period.netProfit ?? 0) > 0 ? "success" : "destructive"}>
+                          ৳{(period.netProfit ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {((period.netProfit / period.totalSales) * 100).toFixed(1)}%
+                          {(period.totalSales ? (((period.netProfit ?? 0) / period.totalSales) * 100) : 0).toFixed(1)}%
                         </Badge>
                       </TableCell>
                     </TableRow>

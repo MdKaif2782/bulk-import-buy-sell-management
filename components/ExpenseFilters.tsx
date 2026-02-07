@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ExpenseCategory, ExpenseStatus, type GetExpensesParams } from '@/types/expense'
+import { ExpenseCategory, ExpenseStatus, expenseCategoryLabels, type GetExpensesParams } from '@/types/expense'
 
 interface ExpenseFiltersProps {
   filters: GetExpensesParams;
@@ -44,7 +44,7 @@ export default function ExpenseFilters({ filters, onFiltersChange }: ExpenseFilt
                 <SelectItem value="ALL">All categories</SelectItem>
                 {Object.values(ExpenseCategory).map((category) => (
                   <SelectItem key={category} value={category}>
-                    {category.replace('_', ' ')}
+                    {expenseCategoryLabels[category] || category.replace(/_/g, ' ')}
                   </SelectItem>
                 ))}
               </SelectContent>

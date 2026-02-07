@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,16 @@ export default function EmployeePage() {
   const [paySalaryDialogOpen, setPaySalaryDialogOpen] = useState(false);
   const [paySalaryEmployee, setPaySalaryEmployee] = useState<Employee | null>(null);
   const [paySalarySalary, setPaySalarySalary] = useState<Salary | null>(null);
+
+  // Ref for scrolling to form
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll when form appears
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showForm]);
 
   // Filter employees based on search
   const filteredEmployees = employees?.filter(employee =>
@@ -295,10 +305,12 @@ export default function EmployeePage() {
 
           {/* Employee Form */}
           {showForm && (
-            <EmployeeForm
-              onSubmit={handleCreateEmployee}
-              onCancel={() => setShowForm(false)}
-            />
+            <div ref={formRef}>
+              <EmployeeForm
+                onSubmit={handleCreateEmployee}
+                onCancel={() => setShowForm(false)}
+              />
+            </div>
           )}
 
           {/* Edit Employee Form */}

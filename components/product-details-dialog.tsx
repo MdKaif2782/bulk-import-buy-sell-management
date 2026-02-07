@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Inventory } from "@/types/inventory"
-import { FileText, Package, Tag, BarChart3 } from "lucide-react"
+import { FileText, Package, Tag, BarChart3, ImageIcon } from "lucide-react"
 
 interface InventoryDetailsDialogProps {
   isOpen: boolean
@@ -37,6 +37,21 @@ export function InventoryDetailsDialog({ isOpen, onClose, inventory }: Inventory
         </DialogHeader>
 
         <div className="grid gap-6">
+          {/* Product Image */}
+          {inventory.imageUrl && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="w-full h-56 rounded-lg overflow-hidden bg-muted">
+                  <img
+                    src={inventory.imageUrl}
+                    alt={inventory.productName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Basic Information */}
           <Card>
             <CardHeader>

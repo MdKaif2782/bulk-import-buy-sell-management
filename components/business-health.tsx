@@ -88,11 +88,11 @@ export function BusinessHealth() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Profitability Index</p>
-                    <p className="text-xl font-bold">{businessHealth.profitabilityIndex.toFixed(2)}</p>
+                    <p className="text-xl font-bold">{businessHealth.profitabilityIndex?.toFixed(2)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Operating Margin</p>
-                    <p className="text-xl font-bold">{businessHealth.operatingMargin.toFixed(1)}%</p>
+                    <p className="text-xl font-bold">{businessHealth.operatingMargin?.toFixed(1)}%</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Cash Flow</p>
@@ -104,7 +104,7 @@ export function BusinessHealth() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Current Ratio</p>
-                    <p className="text-xl font-bold">{businessHealth.currentRatio.toFixed(2)}</p>
+                    <p className="text-xl font-bold">{businessHealth.currentRatio?.toFixed(2)}</p>
                   </div>
                 </div>
               </>
@@ -274,13 +274,13 @@ export function BusinessHealth() {
                     <div className="flex justify-between">
                       <span>Gross Margin</span>
                       <Badge variant="outline">
-                        {corporateSummary.sales.grossMargin.toFixed(1)}%
+                        {corporateSummary.sales.grossMargin?.toFixed(1)}%
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Net Margin</span>
                       <Badge variant="default">
-                        {corporateSummary.sales.netMargin.toFixed(1)}%
+                        {corporateSummary.sales.netMargin?.toFixed(1)}%
                       </Badge>
                     </div>
                   </div>
@@ -293,13 +293,13 @@ export function BusinessHealth() {
                     <div className="flex justify-between">
                       <span>Total Investment</span>
                       <span className="font-semibold">
-                        ৳{corporateSummary.investors.totalInvestment.toLocaleString()}
+                        ৳{corporateSummary.investors.totalInvestment?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Due to Investors</span>
                       <span className="font-semibold text-orange-600">
-                        ৳{corporateSummary.investors.totalDueToInvestors.toLocaleString()}
+                        ৳{corporateSummary.investors.totalDueToInvestors?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -311,7 +311,7 @@ export function BusinessHealth() {
                     <div className="flex justify-between">
                       <span>Inventory Value</span>
                       <span className="font-semibold">
-                        ৳{corporateSummary.inventory.totalInventoryValue.toLocaleString()}
+                        ৳{corporateSummary.inventory.totalInventoryValue?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -330,13 +330,13 @@ export function BusinessHealth() {
                     <div className="flex justify-between">
                       <span>Total Expenses</span>
                       <span className="font-semibold">
-                        ৳{corporateSummary.expenses.total.toLocaleString()}
+                        ৳{corporateSummary.expenses.total?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Salary Expense</span>
                       <span className="font-semibold">
-                        ৳{corporateSummary.employees.totalSalaryExpense.toLocaleString()}
+                        ৳{corporateSummary.employees.totalSalaryExpense?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -354,7 +354,7 @@ export function BusinessHealth() {
                     <div className="flex justify-between">
                       <span>Average Salary</span>
                       <span className="font-semibold">
-                        ৳{corporateSummary.employees.averageSalary.toLocaleString()}
+                        ৳{corporateSummary.employees.averageSalary?.toLocaleString()}
                       </span>
                     </div>
                   </div>

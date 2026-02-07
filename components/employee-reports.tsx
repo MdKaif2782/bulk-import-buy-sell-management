@@ -48,11 +48,11 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
               </div>
               <div>
                 <p className="text-muted-foreground">Total Salary Expense</p>
-                <p className="text-xl font-semibold">৳{salarySummary.totalSalaryExpense.toLocaleString()}</p>
+                <p className="text-xl font-semibold">৳{(salarySummary.totalSalaryExpense ?? 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Average Salary</p>
-                <p className="text-xl font-semibold">৳{salarySummary.averageSalary.toLocaleString()}</p>
+                <p className="text-xl font-semibold">৳{(salarySummary.averageSalary ?? 0).toLocaleString()}</p>
               </div>
             </div>
           ) : null}
@@ -100,12 +100,12 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Total Salary Expense</p>
-                    <p className="text-2xl font-bold">৳{salarySummary.totalSalaryExpense.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">৳{(salarySummary.totalSalaryExpense ?? 0).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Average Salary</p>
                     <p className="text-xl font-semibold">
-                      ৳{salarySummary.averageSalary.toLocaleString()}
+                      ৳{(salarySummary.averageSalary ?? 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -116,13 +116,13 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
                     <div className="flex justify-between">
                       <span>Active Rate</span>
                       <Badge variant="success">
-                        {((salarySummary.activeEmployees / salarySummary.totalEmployees) * 100).toFixed(1)}%
+                        {(salarySummary.totalEmployees ? ((salarySummary.activeEmployees / salarySummary.totalEmployees) * 100) : 0).toFixed(1)}%
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Monthly Salary Cost</span>
                       <span className="font-semibold">
-                        ৳{(salarySummary.totalSalaryExpense / 12).toLocaleString()}
+                        ৳{((salarySummary.totalSalaryExpense ?? 0) / 12).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -178,7 +178,7 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
                   <div className="flex justify-between text-sm">
                     <span>Utilization Rate</span>
                     <Badge variant="default">
-                      {((salarySummary.activeEmployees / salarySummary.totalEmployees) * 100).toFixed(1)}%
+                      {(salarySummary.totalEmployees ? ((salarySummary.activeEmployees / salarySummary.totalEmployees) * 100) : 0).toFixed(1)}%
                     </Badge>
                   </div>
                 </div>
@@ -220,23 +220,23 @@ export function EmployeeReports({ preview = false }: EmployeeReportsProps) {
                   {monthlySalaries.map((month) => (
                     <TableRow key={month.month}>
                       <TableCell className="font-medium">{month.month}</TableCell>
-                      <TableCell>৳{month.totalSalary.toLocaleString()}</TableCell>
+                      <TableCell>৳{(month.totalSalary ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{month.employeeCount}</Badge>
                       </TableCell>
-                      <TableCell>৳{month.allowances.toLocaleString()}</TableCell>
+                      <TableCell>৳{(month.allowances ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          ৳{month.overtime.toLocaleString()}
+                          ৳{(month.overtime ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="success">
-                          ৳{month.bonuses.toLocaleString()}
+                          ৳{(month.bonuses ?? 0).toLocaleString()}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        ৳{(month.totalSalary / month.employeeCount).toLocaleString()}
+                        ৳{(month.employeeCount ? ((month.totalSalary ?? 0) / month.employeeCount) : 0).toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}
