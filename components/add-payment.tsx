@@ -3,6 +3,7 @@ import { useAddPaymentMutation } from '@/lib/store/api/billApi';
 import { Bill } from '@/types/bill';
 import { DollarSign, Calendar, Building } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,17 +23,23 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({
   onOpenChange,
   bill,
 }) => {
-  const [amount, setAmount] = useState(0);
+  const [amountStr, setAmountStr] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD'>('CASH');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
 
   const [addPayment, { isLoading }] = useAddPaymentMutation();
 
+  // Derived: parse amount safely, fallback to 0 if invalid
+  const amount = parseFloat(amountStr) || 0;
+  const isAmountValid = !isNaN(parseFloat(amountStr)) && amount >= 0.01 && amount <= (bill?.dueAmount || 0);
+  const VALID_METHODS = ['CASH', 'BANK_TRANSFER', 'CHEQUE', 'CARD'] as const;
+  const isMethodValid = VALID_METHODS.includes(paymentMethod);
+
   // Reset form when dialog opens with a new bill
   useEffect(() => {
     if (open && bill) {
-      setAmount(bill.dueAmount);
+      setAmountStr(String(bill.dueAmount));
       setPaymentMethod('CASH');
       setReference('');
       setNotes('');
@@ -41,51 +48,66 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Bill before submit:", bill);
-    console.log("Bill ID:", bill?.id);
 
-    
-    if (!bill) {
-      console.error('No bill selected');
+    if (!bill || !bill.id) {
+      toast.error('No bill selected');
       return;
     }
 
+    // Validate amount
+    const parsedAmount = parseFloat(amountStr);
+    if (isNaN(parsedAmount) || parsedAmount < 0.01) {
+      toast.error('Please enter a valid payment amount (minimum 0.01)');
+      return;
+    }
+    if (parsedAmount > bill.dueAmount) {
+      toast.error(`Payment amount cannot exceed due amount (৳${bill.dueAmount.toLocaleString()})`);
+      return;
+    }
+
+    // Validate payment method
+    if (!VALID_METHODS.includes(paymentMethod)) {
+      toast.error('Please select a valid payment method');
+      return;
+    }
+
+    const payload = {
+      amount: parsedAmount,
+      paymentMethod,
+      reference: reference?.trim() || undefined,
+    };
+
     try {
-      console.log('Submitting payment for bill:', bill.id, {
-        amount,
-        paymentMethod,
-        reference: reference || undefined,
-        notes: notes || undefined,
-      });
+      console.log('Submitting payment for bill:', bill.id, payload);
 
       await addPayment({
         id: bill.id,
-        data: {
-          amount,
-          paymentMethod,
-          reference: reference || undefined
-        },
+        data: payload,
       }).unwrap();
 
       // Open PDF in new tab
       const pdfUrl = `https://genuine.inovate.it.com/api/bills/${bill.id}/pdf`;
       window.open(pdfUrl, '_blank');
 
+      toast.success('Payment recorded successfully!');
+
       // Reset form and close dialog
-      setAmount(0);
+      setAmountStr('');
       setPaymentMethod('CASH');
       setReference('');
       setNotes('');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add payment:', error);
+      const msg = error?.data?.message;
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to add payment');
     }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Reset form when closing
-      setAmount(0);
+      setAmountStr('');
       setPaymentMethod('CASH');
       setReference('');
       setNotes('');
@@ -136,14 +158,15 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({
             <Input
               id="amount"
               type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              min="0"
+              step="0.01"
+              value={amountStr}
+              onChange={(e) => setAmountStr(e.target.value)}
+              min="0.01"
               max={bill?.dueAmount || 0}
               required
             />
             <p className="text-xs text-muted-foreground">
-              Maximum: ${bill?.dueAmount.toLocaleString()}
+              Maximum: ৳{bill?.dueAmount.toLocaleString()}
             </p>
           </div>
 
@@ -198,7 +221,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !bill || amount <= 0 || amount > (bill?.dueAmount || 0)}
+              disabled={isLoading || !bill || !isAmountValid || !isMethodValid}
             >
               {isLoading ? 'Processing...' : 'Add Payment'}
             </Button>

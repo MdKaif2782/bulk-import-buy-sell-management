@@ -39,12 +39,12 @@ export const billApi = baseApi.injectEndpoints({
     }),
 
     addPayment: builder.mutation<Bill, { id: string; data: AddPaymentRequest }>({
-     
       query: ({ id, data }) => ({
         url: `/bills/${id}/payments`,
         method: 'POST',
         body: data,
       }),
+      invalidatesTags: ['Bill'],
     }),
 
     getBillStats: builder.query<BillStats, void>({
