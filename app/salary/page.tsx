@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Search, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -252,6 +253,12 @@ export default function EmployeePage() {
               </p>
             </div>
             <div className="flex space-x-2">
+              <Link href="/salary/bulk-upload">
+                <Button variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Bulk Upload
+                </Button>
+              </Link>
               <Button 
                 onClick={handleGenerateMonthlySalaries}
                 disabled={isGenerating}

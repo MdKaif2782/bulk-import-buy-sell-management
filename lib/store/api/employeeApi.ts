@@ -20,6 +20,10 @@ import {
   SalaryPreviewResponse,
   PaySalaryResponse,
 } from '@/types/employee';
+import {
+  BulkSalaryUploadRequest,
+  BulkSalaryUploadData,
+} from '@/types/bulkSalary';
 
 // Define the response wrapper type
 interface ApiResponse<T> {
@@ -227,6 +231,17 @@ export const employeeApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<SalaryPreviewResponse>) => response.data,
       providesTags: ['Salary', 'Advance'],
     }),
+
+    // ==================== Bulk Salary Upload ====================
+    bulkSalaryUpload: builder.mutation<BulkSalaryUploadData, BulkSalaryUploadRequest>({
+      query: (body) => ({
+        url: '/employees/salaries/bulk-upload',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response: ApiResponse<BulkSalaryUploadData>) => response.data,
+      invalidatesTags: ['Salary', 'Payables', 'Statistics', 'Advance', 'Employee', 'Expense'],
+    }),
   }),
 });
 
@@ -250,4 +265,6 @@ export const {
   useGetAdvanceHistoryQuery,
   useGetAdvanceOverviewQuery,
   useGetSalaryPreviewQuery,
+  // Bulk salary upload
+  useBulkSalaryUploadMutation,
 } = employeeApi;
